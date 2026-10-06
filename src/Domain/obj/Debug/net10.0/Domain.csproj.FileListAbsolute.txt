@@ -1,0 +1,12 @@
+/workspaces/portalEmpleo-backend/src/Domain/bin/Debug/net10.0/Domain.deps.json
+/workspaces/portalEmpleo-backend/src/Domain/bin/Debug/net10.0/Domain.dll
+/workspaces/portalEmpleo-backend/src/Domain/bin/Debug/net10.0/Domain.pdb
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/Domain.GeneratedMSBuildEditorConfig.editorconfig
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/Domain.AssemblyInfoInputs.cache
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/Domain.AssemblyInfo.cs
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/Domain.csproj.CoreCompileInputs.cache
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/Domain.sourcelink.json
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/Domain.dll
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/refint/Domain.dll
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/Domain.pdb
+/workspaces/portalEmpleo-backend/src/Domain/obj/Debug/net10.0/ref/Domain.dll
