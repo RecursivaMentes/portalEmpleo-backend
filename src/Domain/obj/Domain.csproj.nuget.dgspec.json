@@ -1,20 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj": {}
+    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {}
   },
   "projects": {
-    "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj": {
+    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj",
+        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
         "projectName": "Domain",
-        "projectPath": "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/portalEmpleo-backend/src/Domain/obj/",
+        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
+        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -61,7 +66,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
