@@ -1,20 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "/workspaces/portalEmpleo-backend/src/Api/Api.csproj": {}
+    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj": {}
   },
   "projects": {
-    "/workspaces/portalEmpleo-backend/src/Api/Api.csproj": {
+    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/portalEmpleo-backend/src/Api/Api.csproj",
+        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj",
         "projectName": "Api",
-        "projectPath": "/workspaces/portalEmpleo-backend/src/Api/Api.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/portalEmpleo-backend/src/Api/obj/",
+        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj",
+        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -27,11 +32,11 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/workspaces/portalEmpleo-backend/src/Application/Application.csproj": {
-                "projectPath": "/workspaces/portalEmpleo-backend/src/Application/Application.csproj"
+              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
+                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj"
               },
-              "/workspaces/portalEmpleo-backend/src/Infrastructure/Infrastructure.csproj": {
-                "projectPath": "/workspaces/portalEmpleo-backend/src/Infrastructure/Infrastructure.csproj"
+              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj"
               }
             }
           }
@@ -56,6 +61,12 @@
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[10.0.12, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.12, )"
             }
           },
           "imports": [
@@ -77,7 +88,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
@@ -495,17 +506,22 @@
         }
       }
     },
-    "/workspaces/portalEmpleo-backend/src/Application/Application.csproj": {
+    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/portalEmpleo-backend/src/Application/Application.csproj",
+        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj",
         "projectName": "Application",
-        "projectPath": "/workspaces/portalEmpleo-backend/src/Application/Application.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/portalEmpleo-backend/src/Application/obj/",
+        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj",
+        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -518,8 +534,8 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj": {
-                "projectPath": "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj"
+              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
+                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj"
               }
             }
           }
@@ -556,7 +572,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -834,17 +850,22 @@
         }
       }
     },
-    "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj": {
+    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj",
+        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
         "projectName": "Domain",
-        "projectPath": "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/portalEmpleo-backend/src/Domain/obj/",
+        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
+        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -891,7 +912,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -1169,17 +1190,22 @@
         }
       }
     },
-    "/workspaces/portalEmpleo-backend/src/Infrastructure/Infrastructure.csproj": {
+    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/portalEmpleo-backend/src/Infrastructure/Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
         "projectName": "Infrastructure",
-        "projectPath": "/workspaces/portalEmpleo-backend/src/Infrastructure/Infrastructure.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/portalEmpleo-backend/src/Infrastructure/obj/",
+        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -1192,11 +1218,11 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/workspaces/portalEmpleo-backend/src/Application/Application.csproj": {
-                "projectPath": "/workspaces/portalEmpleo-backend/src/Application/Application.csproj"
+              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
+                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj"
               },
-              "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj": {
-                "projectPath": "/workspaces/portalEmpleo-backend/src/Domain/Domain.csproj"
+              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
+                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj"
               }
             }
           }
@@ -1245,7 +1271,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
