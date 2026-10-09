@@ -1,77 +1,73 @@
 # portalEmpleo-backend
 
-API del portal de empleos, construida con .NET 10, Entity Framework Core y PostgreSQL.
+Backend del portal de empleos, desarrollado con **.NET 10**, Entity Framework Core y PostgreSQL, organizado mediante una arquitectura de **microservicios**.
 
-## Estructura
+Cada microservicio cuenta con sus propios proyectos o capas y administra su propia base de datos.
 
-```
+## Estructura del proyecto
+
+```text
 src/
-├── Api             Punto de entrada web (controladores / endpoints)
-├── Application     Casos de uso
-├── Domain          Entidades y enums
-└── Infrastructure  Acceso a datos (AppDbContext, configuraciones EF Core, migraciones)
+└── Services/
+    ├── Usuarios/
+    │   └── Api/
+    └── ...
 ```
+
+Cada directorio dentro de `Services` representa un microservicio. Su estructura interna puede incluir proyectos para la API, la lógica de aplicación, el dominio y el acceso a datos, según la organización de cada servicio.
 
 ## Requisitos
 
-- [SDK de .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [PostgreSQL](https://www.postgresql.org/download/)
-- Herramienta de migraciones de EF Core (se instala una sola vez):
+* [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+* [PostgreSQL](https://www.postgresql.org/download/)
+* Herramienta de migraciones de Entity Framework Core, si el servicio utiliza EF Core:
 
 ```bash
 dotnet tool install --global dotnet-ef
 ```
 
-## Configurar la base de datos local
+Si ya está instalada, no hace falta ejecutar nuevamente este comando.
 
-Las migraciones ya están en el repositorio (`src/Infrastructure/Persistence/Migrations`). Cada persona solo tiene que aplicarlas a su propia base local. Los comandos se ejecutan desde la carpeta raíz del repo.
+## Configuración de la base de datos
 
-### 1. Crear la base de datos
+Cada microservicio debe utilizar su propia base de datos. Las bases locales se configuran de manera independiente.
 
-Pedirá la contraseña del usuario `postgres` que definiste al instalar PostgreSQL.
+Para configurar un servicio:
 
-```bash
-psql -U postgres -h localhost -c "CREATE DATABASE portalempleo;"
-```
+1. Crear la base de datos correspondiente en PostgreSQL.
+2. Configurar la cadena de conexión mediante el mecanismo de configuración utilizado por ese servicio.
+3. Aplicar las migraciones existentes, si las tiene.
 
-> En Windows, si `psql` no se reconoce, usa la ruta completa, por ejemplo
-> `"C:\Program Files\PostgreSQL\18\bin\psql.exe"`.
+No se deben compartir las credenciales ni las cadenas de conexión entre servicios si corresponden a bases de datos diferentes.
 
-### 2. Guardar la cadena de conexión como secreto
+## Ejecutar un microservicio
 
-La contraseña **no** va en el código ni en git. Se guarda con *user-secrets*, que la deja en tu máquina. Reemplaza `TU_PASSWORD` por tu contraseña.
-
-```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=portalempleo;Username=postgres;Password=TU_PASSWORD" --project src/Api
-```
-
-Este valor tiene prioridad sobre el de `appsettings.Development.json`, que no incluye contraseña.
-
-### 3. Aplicar las migraciones
+Para iniciar el microservicio de Usuarios, ejecutar desde la raíz del repositorio:
 
 ```bash
-dotnet ef database update --project src/Infrastructure --startup-project src/Api
+dotnet run --project src/Services/Usuarios/Api
 ```
 
-Esto crea todas las tablas en tu base local.
+Actualmente, en el entorno de desarrollo, la API de Usuarios escucha en:
 
-## Ejecutar la API
-
-```bash
-dotnet run --project src/Api --launch-profile http
+```text
+http://localhost:5078
 ```
 
-Queda disponible en `http://localhost:5077`.
+Los demás microservicios deben ejecutarse utilizando la ruta de su propio proyecto `Api` y el puerto configurado para cada uno.
 
 ## Trabajar con migraciones
 
-- **No ejecutes `migrations add` para configurar tu base.** Eso crea una migración nueva y duplicada. Para tener las tablas solo hace falta `database update`.
-- Cada persona tiene su propia base local: se comparte el esquema, no los datos.
-- **Si cambias las entidades o sus configuraciones**, genera una migración nueva y súbela al repo:
+Las migraciones deben gestionarse de forma independiente para cada microservicio que utilice Entity Framework Core.
 
-```bash
-dotnet ef migrations add NombreDelCambio --project src/Infrastructure --startup-project src/Api --output-dir Persistence/Migrations
-```
+* Si el repositorio ya contiene las migraciones, aplicar las existentes; no generar migraciones nuevas únicamente para configurar una base local.
+* Cuando se modifican las entidades o sus configuraciones, generar una migración nueva en el proyecto correspondiente.
+* Después de incorporar migraciones nuevas mediante Git, aplicar las pendientes a la base de datos local del servicio.
+* No ejecutar comandos de migración apuntando a rutas de otro microservicio.
+* Antes de aplicar migraciones, verificar qué proyecto contiene el `DbContext`, cuál es el proyecto de inicio y dónde se almacenan las migraciones.
 
-- Después de hacer `git pull` con una migración nueva, vuelve a ejecutar `database update`.
-- Para deshacer la última migración, antes de subirla: `dotnet ef migrations remove --project src/Infrastructure --startup-project src/Api`.
+Los comandos concretos de Entity Framework Core deben definirse según la estructura real de cada microservicio.
+
+## Desarrollo
+
+Los endpoints y las funcionalidades de cada microservicio se irán incorporando progresivamente. La documentación se actualizará a medida que se agreguen servicios y se definan sus configuraciones.

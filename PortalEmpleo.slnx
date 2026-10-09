@@ -1,8 +1,33 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Api/Api.csproj" />
-    <Project Path="src/Application/Application.csproj" />
-    <Project Path="src/Domain/Domain.csproj" />
-    <Project Path="src/Infrastructure/Infrastructure.csproj" />
+  <!-- Carpeta de Solución para Usuarios -->
+  <Folder Name="/Usuarios/">
+    <Project Path="src/Services/Usuarios/Api/Api.csproj" />
+    <Project Path="src/Services/Usuarios/Application/Application.csproj" />
+    <Project Path="src/Services/Usuarios/Domain/Domain.csproj" />
+    <Project Path="src/Services/Usuarios/Infrastructure/Infrastructure.csproj" />
+  </Folder>
+
+  <!-- Carpeta de Solución para Empleos y Postulaciones -->
+  <Folder Name="/EmpleosYpostulaciones/">
+    <Project Path="src/Services/EmpleosYpostulaciones/Api/Api.csproj" />
+    <Project Path="src/Services/EmpleosYpostulaciones/Application/Application.csproj" />
+    <Project Path="src/Services/EmpleosYpostulaciones/Domain/Domain.csproj" />
+    <Project Path="src/Services/EmpleosYpostulaciones/Infrastructure/Infrastructure.csproj" />
+  </Folder>
+
+  <!-- Carpeta de Solución para Chatbot -->
+  <Folder Name="/Chatbot/">
+    <Project Path="src/Services/Chatbot/Api/Api.csproj" />
+    <Project Path="src/Services/Chatbot/Application/Application.csproj" />
+    <Project Path="src/Services/Chatbot/Domain/Domain.csproj" />
+    <Project Path="src/Services/Chatbot/Infrastructure/Infrastructure.csproj" />
+  </Folder>
+
+  <!-- Carpeta de Solución para Recomendaciones -->
+  <Folder Name="/Recomendaciones/">
+    <Project Path="src/Services/Recomendaciones/Api/Api.csproj" />
+    <Project Path="src/Services/Recomendaciones/Application/Application.csproj" />
+    <Project Path="src/Services/Recomendaciones/Domain/Domain.csproj" />
+    <Project Path="src/Services/Recomendaciones/Infrastructure/Infrastructure.csproj" />
   </Folder>
 </Solution>
