@@ -8,23 +8,23 @@
     "net10.0": []
   },
   "packageFolders": {
-    "C:\\Users\\54112\\.nuget\\packages\\": {},
+    "C:\\Users\\lucia\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
+      "projectUniqueName": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj",
       "projectName": "Domain",
-      "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
-      "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\obj\\",
+      "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj",
+      "packagesPath": "C:\\Users\\lucia\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\lucia\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -32,6 +32,8 @@
         "net10.0"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {

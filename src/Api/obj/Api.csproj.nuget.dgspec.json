@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj": {}
+    "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Api\\Api.csproj": {}
   },
   "projects": {
-    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj": {
+    "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Api\\Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj",
+        "projectUniqueName": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Api\\Api.csproj",
         "projectName": "Api",
-        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\Api.csproj",
-        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Api\\obj\\",
+        "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Api\\Api.csproj",
+        "packagesPath": "C:\\Users\\lucia\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Api\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\lucia\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -25,6 +25,8 @@
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -32,11 +34,11 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
-                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj"
+              "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\Application.csproj": {
+                "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\Application.csproj"
               },
-              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj": {
-                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj"
+              "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Infrastructure\\Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Infrastructure\\Infrastructure.csproj"
               }
             }
           }
@@ -506,20 +508,20 @@
         }
       }
     },
-    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
+    "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj",
+        "projectUniqueName": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\Application.csproj",
         "projectName": "Application",
-        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj",
-        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\obj\\",
+        "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\Application.csproj",
+        "packagesPath": "C:\\Users\\lucia\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\lucia\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -527,6 +529,8 @@
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -534,8 +538,8 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
-                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj"
+              "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj": {
+                "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj"
               }
             }
           }
@@ -850,20 +854,20 @@
         }
       }
     },
-    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
+    "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
+        "projectUniqueName": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj",
         "projectName": "Domain",
-        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj",
-        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\obj\\",
+        "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj",
+        "packagesPath": "C:\\Users\\lucia\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\lucia\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -871,6 +875,8 @@
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -1190,20 +1196,20 @@
         }
       }
     },
-    "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj": {
+    "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Infrastructure\\Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Infrastructure\\Infrastructure.csproj",
         "projectName": "Infrastructure",
-        "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\obj\\",
+        "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Infrastructure\\Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\lucia\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\lucia\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -1211,6 +1217,8 @@
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -1218,11 +1226,11 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
-                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj"
+              "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\Application.csproj": {
+                "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Application\\Application.csproj"
               },
-              "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
-                "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj"
+              "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj": {
+                "projectPath": "C:\\Users\\lucia\\OneDrive\\Documentos\\Universidad\\Ingeniería en Informática - UNAJ\\Cuatrimestre 8\\Proyecto de Software\\Recursivamentes\\backend\\src\\Domain\\Domain.csproj"
               }
             }
           }
@@ -1247,6 +1255,10 @@
             "Microsoft.EntityFrameworkCore.Design": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.12, )"
+            },
+            "Microsoft.Extensions.Identity.Core": {
               "target": "Package",
               "version": "[10.0.12, )"
             },
