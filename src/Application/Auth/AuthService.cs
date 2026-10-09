@@ -1,6 +1,9 @@
+using Application.Auth;
+using Domain.Entities;
+
 namespace Application.Auth;
 
-public class AuthService(IUsuarioRepository usuarios)
+public class AuthService(IUsuarioRepository usuarios, IPasswordService passwords)
 {
     public async Task<LoginResponse?> LoginAsync(
         LoginRequest request,
@@ -13,7 +16,7 @@ public class AuthService(IUsuarioRepository usuarios)
         if (usuario is null || !usuario.Estado)
             return null;
 
-        if (usuario.PasswordHash != request.Password)
+        if (!passwords.verifyPassword(usuario.PasswordHash, request.Password))
             return null;
 
         return new LoginResponse(
