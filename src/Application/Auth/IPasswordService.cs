@@ -8,6 +8,6 @@ namespace Application.Auth
     {
         string HashPassword(string password);
 
-        bool verifyPassword(string hashedPassword, string password);
+        bool VerifyPassword(string hashedPassword, string password);
     }
 }

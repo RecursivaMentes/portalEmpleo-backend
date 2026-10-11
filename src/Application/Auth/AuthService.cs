@@ -1,9 +1,11 @@
 using Application.Auth;
 using Domain.Entities;
-
 namespace Application.Auth;
 
-public class AuthService(IUsuarioRepository usuarios, IPasswordService passwords)
+public class AuthService(
+    IUsuarioRepository usuarios,
+    IPasswordService passwords,
+    ITokenService tokens)
 {
     public async Task<LoginResponse?> LoginAsync(
         LoginRequest request,
@@ -16,14 +18,15 @@ public class AuthService(IUsuarioRepository usuarios, IPasswordService passwords
         if (usuario is null || !usuario.Estado)
             return null;
 
-        if (!passwords.verifyPassword(usuario.PasswordHash, request.Password))
+        if (!passwords.VerifyPassword(
+            usuario.PasswordHash,
+            request.Password))
             return null;
 
+        var result = tokens.GenerateToken(usuario);
+
         return new LoginResponse(
-            usuario.Id,
-            usuario.Email,
-            usuario.Nombre,
-            usuario.Apellido,
-            usuario.Rol);
+            result.AccessToken,
+            result.ExpiresAtUtc);
     }
 }

@@ -38,3 +38,23 @@ C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Infrastructure\obj
 C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.pdb
 C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.genruntimeconfig.cache
 C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Infrastructure\obj\Debug\net10.0\ref\Infrastructure.dll
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.dll
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\refint\Infrastructure.dll
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.pdb
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.csproj.AssemblyReference.cache
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.AssemblyInfoInputs.cache
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.AssemblyInfo.cs
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.sourcelink.json
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Infrastructure.deps.json
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Infrastructure.dll
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Infrastructure.pdb
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Application.dll
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Domain.dll
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Application.pdb
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Domain.pdb
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastr.15EFFBFE.Up2Date
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\ref\Infrastructure.dll
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\bin\Debug\net10.0\Infrastructure.runtimeconfig.json
+C:\Users\lucia\OneDrive\Documentos\Universidad\Ingeniería en Informática - UNAJ\Cuatrimestre 8\Proyecto de Software\Recursivamentes\backend\src\Infrastructure\obj\Debug\net10.0\Infrastructure.genruntimeconfig.cache

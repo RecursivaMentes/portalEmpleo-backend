@@ -13,12 +13,10 @@ namespace Infrastructure.Security
 
         public string HashPassword(string password)
         {
-            return passwordHasher.HashPassword(
-                new Usuario(),
-                password);
+            return passwordHasher.HashPassword(new Usuario(), password);
         }
 
-        public bool verifyPassword(string passwordHash, string password)
+        public bool VerifyPassword(string passwordHash, string password)
         {
             var result = passwordHasher.VerifyHashedPassword(new Usuario(), passwordHash, password);
 

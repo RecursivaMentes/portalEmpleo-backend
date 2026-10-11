@@ -23,6 +23,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IPasswordService, PasswordService>();
+        services.AddScoped<ITokenService, JwtTokenService>();
 
         return services;
     }
