@@ -1,24 +1,30 @@
 {
-  "version": 4,
+  "version": 3,
   "targets": {
     "net10.0": {
       "Humanizer.Core/2.14.1": {
         "type": "package",
         "compile": {
-          "lib/net6.0/_._": {}
+          "lib/net6.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net6.0/Humanizer.dll": {}
+          "lib/net6.0/Humanizer.dll": {
+            "related": ".xml"
+          }
         }
       },
       "Microsoft.Build.Framework/18.0.2": {
         "type": "package",
         "compile": {
-          "ref/net10.0/_._": {}
+          "ref/net10.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
           "lib/net10.0/Microsoft.Build.Framework.dll": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         }
       },
@@ -36,12 +42,12 @@
         },
         "compile": {
           "lib/net9.0/_._": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "runtime": {
           "lib/net9.0/Microsoft.CodeAnalysis.dll": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "resource": {
@@ -94,12 +100,12 @@
         },
         "compile": {
           "lib/net9.0/_._": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "runtime": {
           "lib/net9.0/Microsoft.CodeAnalysis.CSharp.dll": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "resource": {
@@ -156,12 +162,12 @@
         },
         "compile": {
           "lib/net9.0/_._": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "runtime": {
           "lib/net9.0/Microsoft.CodeAnalysis.CSharp.Workspaces.dll": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "resource": {
@@ -216,12 +222,12 @@
         },
         "compile": {
           "lib/net9.0/_._": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "runtime": {
           "lib/net9.0/Microsoft.CodeAnalysis.Workspaces.dll": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "resource": {
@@ -288,7 +294,7 @@
         "runtime": {
           "lib/net9.0/Microsoft.CodeAnalysis.ExternalAccess.RazorCompiler.dll": {},
           "lib/net9.0/Microsoft.CodeAnalysis.Workspaces.MSBuild.dll": {
-            "related": ".pdb"
+            "related": ".pdb;.xml"
           }
         },
         "resource": {
@@ -405,10 +411,14 @@
           "Microsoft.Extensions.Logging": "10.0.12"
         },
         "compile": {
-          "lib/net10.0/Microsoft.EntityFrameworkCore.Relational.dll": {}
+          "lib/net10.0/Microsoft.EntityFrameworkCore.Relational.dll": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net10.0/Microsoft.EntityFrameworkCore.Relational.dll": {}
+          "lib/net10.0/Microsoft.EntityFrameworkCore.Relational.dll": {
+            "related": ".xml"
+          }
         }
       },
       "Microsoft.Extensions.Caching.Abstractions/10.0.12": {
@@ -490,10 +500,14 @@
       "Microsoft.Extensions.DependencyModel/10.0.12": {
         "type": "package",
         "compile": {
-          "lib/net10.0/_._": {}
+          "lib/net10.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net10.0/Microsoft.Extensions.DependencyModel.dll": {}
+          "lib/net10.0/Microsoft.Extensions.DependencyModel.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/net8.0/_._": {}
@@ -562,10 +576,14 @@
       "Microsoft.VisualStudio.SolutionPersistence/1.0.52": {
         "type": "package",
         "compile": {
-          "lib/net8.0/_._": {}
+          "lib/net8.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net8.0/Microsoft.VisualStudio.SolutionPersistence.dll": {}
+          "lib/net8.0/Microsoft.VisualStudio.SolutionPersistence.dll": {
+            "related": ".xml"
+          }
         }
       },
       "Mono.TextTemplating/3.0.0": {
@@ -586,10 +604,14 @@
       "Newtonsoft.Json/13.0.4": {
         "type": "package",
         "compile": {
-          "lib/net6.0/_._": {}
+          "lib/net6.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net6.0/Newtonsoft.Json.dll": {}
+          "lib/net6.0/Newtonsoft.Json.dll": {
+            "related": ".xml"
+          }
         }
       },
       "Npgsql/10.0.3": {
@@ -621,10 +643,14 @@
       "System.CodeDom/6.0.0": {
         "type": "package",
         "compile": {
-          "lib/net6.0/_._": {}
+          "lib/net6.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net6.0/System.CodeDom.dll": {}
+          "lib/net6.0/System.CodeDom.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/netcoreapp3.1/_._": {}
@@ -652,10 +678,14 @@
       "System.Composition.AttributedModel/9.0.0": {
         "type": "package",
         "compile": {
-          "lib/net9.0/_._": {}
+          "lib/net9.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net9.0/System.Composition.AttributedModel.dll": {}
+          "lib/net9.0/System.Composition.AttributedModel.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/net8.0/_._": {}
@@ -667,10 +697,14 @@
           "System.Composition.AttributedModel": "9.0.0"
         },
         "compile": {
-          "lib/net9.0/_._": {}
+          "lib/net9.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net9.0/System.Composition.Convention.dll": {}
+          "lib/net9.0/System.Composition.Convention.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/net8.0/_._": {}
@@ -682,10 +716,14 @@
           "System.Composition.Runtime": "9.0.0"
         },
         "compile": {
-          "lib/net9.0/_._": {}
+          "lib/net9.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net9.0/System.Composition.Hosting.dll": {}
+          "lib/net9.0/System.Composition.Hosting.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/net8.0/_._": {}
@@ -694,10 +732,14 @@
       "System.Composition.Runtime/9.0.0": {
         "type": "package",
         "compile": {
-          "lib/net9.0/_._": {}
+          "lib/net9.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net9.0/System.Composition.Runtime.dll": {}
+          "lib/net9.0/System.Composition.Runtime.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/net8.0/_._": {}
@@ -711,10 +753,14 @@
           "System.Composition.Runtime": "9.0.0"
         },
         "compile": {
-          "lib/net9.0/_._": {}
+          "lib/net9.0/_._": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net9.0/System.Composition.TypedParts.dll": {}
+          "lib/net9.0/System.Composition.TypedParts.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/net8.0/_._": {}
@@ -2464,42 +2510,35 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\54112\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\Usuario\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
+      "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
       "projectName": "Infrastructure",
-      "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
-      "packagesPath": "C:\\Users\\54112\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Infrastructure\\obj\\",
+      "projectPath": "C:\\Users\\Usuario\\Desktop\\portalEmpleo-backend\\src\\Infrastructure\\Infrastructure.csproj",
+      "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Usuario\\Desktop\\portalEmpleo-backend\\src\\Infrastructure\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\54112\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
-        "https://api.nuget.org/v3/index.json": {}
+        "https://www.nuget.org/api/v2/": {}
       },
       "frameworks": {
         "net10.0": {
-          "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {
-            "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
-              "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Application\\Application.csproj"
+            "C:\\Users\\Usuario\\Desktop\\portalEmpleo-backend\\src\\Application\\Application.csproj": {
+              "projectPath": "C:\\Users\\Usuario\\Desktop\\portalEmpleo-backend\\src\\Application\\Application.csproj"
             },
-            "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
-              "projectPath": "C:\\Users\\54112\\Desktop\\PortalEmpleos\\portalEmpleo-backend\\src\\Domain\\Domain.csproj"
+            "C:\\Users\\Usuario\\Desktop\\portalEmpleo-backend\\src\\Domain\\Domain.csproj": {
+              "projectPath": "C:\\Users\\Usuario\\Desktop\\portalEmpleo-backend\\src\\Domain\\Domain.csproj"
             }
           }
         }
@@ -2514,11 +2553,10 @@
         "auditLevel": "low",
         "auditMode": "all"
       },
-      "SdkAnalysisLevel": "10.0.400"
+      "SdkAnalysisLevel": "10.0.200"
     },
     "frameworks": {
       "net10.0": {
-        "framework": "net10.0",
         "targetAlias": "net10.0",
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Design": {
@@ -2548,7 +2586,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.204/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",

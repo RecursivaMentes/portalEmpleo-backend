@@ -22,3 +22,15 @@ C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Domain\obj\Debug\n
 C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\refint\Domain.dll
 C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.pdb
 C:\Users\54112\Desktop\PortalEmpleos\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\ref\Domain.dll
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\bin\Debug\net10.0\Domain.deps.json
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\bin\Debug\net10.0\Domain.dll
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\bin\Debug\net10.0\Domain.pdb
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.AssemblyInfoInputs.cache
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.AssemblyInfo.cs
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.csproj.CoreCompileInputs.cache
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.sourcelink.json
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.dll
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\refint\Domain.dll
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\Domain.pdb
+C:\Users\Usuario\Desktop\portalEmpleo-backend\src\Domain\obj\Debug\net10.0\ref\Domain.dll
