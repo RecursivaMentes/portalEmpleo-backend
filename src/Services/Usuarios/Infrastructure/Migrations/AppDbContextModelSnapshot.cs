@@ -104,7 +104,7 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ConversacionId")
+                    b.Property<Guid?>("ConversacionId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("Fecha")
@@ -123,9 +123,14 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ConversacionId", "Leido");
+
+                    b.HasIndex("UsuarioId", "Leido");
 
                     b.ToTable("notificaciones", (string)null);
                 });
@@ -247,6 +252,15 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Notificacion", b =>
+                {
+                    b.HasOne("Domain.Entities.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Domain.Entities.PerfilLaboral", b =>

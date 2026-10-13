@@ -7,7 +7,7 @@ public class Postulacion
     public Guid Id { get; set; }
     public Guid UsuarioId { get; set; }
     public Guid EmpleoId { get; set; }
-    public Guid? CvId { get; set; }
+    public Guid CvId { get; set; }
     public EstadoPostulacion Estado { get; set; } = EstadoPostulacion.Pendiente;
     public string? Observaciones { get; set; }
     public string? TextoPresentacion { get; set; }

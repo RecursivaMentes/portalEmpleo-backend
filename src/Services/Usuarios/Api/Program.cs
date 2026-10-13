@@ -1,34 +1,58 @@
+using Application.Auth;
 using Usuarios.Infrastructure;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuración nativa de .NET 10 para documentación de APIs
+builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<AuthService>();
+
+var issuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Falta Jwt:Issuer");
+
+var audience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("Falta Jwt:Audience");
+
+var secret = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Falta Jwt:Key");
+
+var keyBytes = Convert.FromBase64String(secret);
+
+if (keyBytes.Length < 32)
+    throw new InvalidOperationException("Clave JWT demasiado corta");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+
+            ValidateAudience = true,
+            ValidAudience = audience,
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+
+            NameClaimType = "sub",
+            RoleClaimType = "role"
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
-
-// Aplica las migraciones automáticamente en la BD asignada a este servicio
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<AppDbContext>();
-        if (context.Database.IsRelational())
-        {
-            await context.Database.MigrateAsync();
-        }
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Error al inicializar la base de datos del microservicio.");
-    }
-}
-// -------------------------------------------
 
 if (app.Environment.IsDevelopment())
 {
@@ -36,5 +60,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();
