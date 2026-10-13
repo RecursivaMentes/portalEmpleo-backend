@@ -3,9 +3,9 @@
 namespace Application.Auth;
 
 public record LoginRequest(
-    [property: Required, EmailAddress, MaxLength(256)]
+    [param: Required, EmailAddress, MaxLength(256)]
     string Email,
 
-    [property: Required]
+    [param: Required]
     string Password
 );
