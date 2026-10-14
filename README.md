@@ -1,77 +1,191 @@
 # portalEmpleo-backend
 
-API del portal de empleos, construida con .NET 10, Entity Framework Core y PostgreSQL.
+Backend del portal de empleos, desarrollado con **.NET 10**, Entity Framework Core y PostgreSQL, organizado mediante una arquitectura de **microservicios**.
 
-## Estructura
+Cada microservicio cuenta con sus propios proyectos o capas y administra su propia base de datos.
 
-```
+## Estructura del proyecto
+
+```text
 src/
-├── Api             Punto de entrada web (controladores / endpoints)
-├── Application     Casos de uso
-├── Domain          Entidades y enums
-└── Infrastructure  Acceso a datos (AppDbContext, configuraciones EF Core, migraciones)
+└── Services/
+    ├── Usuarios/
+    │   └── Api/
+    └── ...
 ```
+
+Cada directorio dentro de `Services` representa un microservicio. Su estructura interna puede incluir proyectos para la API, la lógica de aplicación, el dominio y el acceso a datos, según la organización de cada servicio.
 
 ## Requisitos
 
-- [SDK de .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [PostgreSQL](https://www.postgresql.org/download/)
-- Herramienta de migraciones de EF Core (se instala una sola vez):
+* [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+* [PostgreSQL](https://www.postgresql.org/download/)
+* Herramienta de migraciones de Entity Framework Core, si el servicio utiliza EF Core:
 
 ```bash
 dotnet tool install --global dotnet-ef
 ```
 
-## Configurar la base de datos local
+Si ya está instalada, no hace falta ejecutar nuevamente este comando.
 
-Las migraciones ya están en el repositorio (`src/Infrastructure/Persistence/Migrations`). Cada persona solo tiene que aplicarlas a su propia base local. Los comandos se ejecutan desde la carpeta raíz del repo.
+## Configuración de la base de datos
 
-### 1. Crear la base de datos
+Cada microservicio debe utilizar su propia base de datos. Las bases locales se configuran de manera independiente.
 
-Pedirá la contraseña del usuario `postgres` que definiste al instalar PostgreSQL.
+Para configurar un servicio:
 
-```bash
-psql -U postgres -h localhost -c "CREATE DATABASE portalempleo;"
-```
+1. Crear la base de datos correspondiente en PostgreSQL.
+2. Configurar la cadena de conexión mediante el mecanismo de configuración utilizado por ese servicio.
+3. Aplicar las migraciones existentes, si las tiene.
 
-> En Windows, si `psql` no se reconoce, usa la ruta completa, por ejemplo
-> `"C:\Program Files\PostgreSQL\18\bin\psql.exe"`.
+No se deben compartir las credenciales ni las cadenas de conexión entre servicios si corresponden a bases de datos diferentes.
 
-### 2. Guardar la cadena de conexión como secreto
+## Ejecutar un microservicio
 
-La contraseña **no** va en el código ni en git. Se guarda con *user-secrets*, que la deja en tu máquina. Reemplaza `TU_PASSWORD` por tu contraseña.
-
-```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=portalempleo;Username=postgres;Password=TU_PASSWORD" --project src/Api
-```
-
-Este valor tiene prioridad sobre el de `appsettings.Development.json`, que no incluye contraseña.
-
-### 3. Aplicar las migraciones
+Para iniciar el microservicio de Usuarios, ejecutar desde la raíz del repositorio:
 
 ```bash
-dotnet ef database update --project src/Infrastructure --startup-project src/Api
+dotnet run --project src/Services/Usuarios/Api
 ```
 
-Esto crea todas las tablas en tu base local.
+Actualmente, en el entorno de desarrollo, la API de Usuarios escucha en:
 
-## Ejecutar la API
-
-```bash
-dotnet run --project src/Api --launch-profile http
+```text
+http://localhost:5078
 ```
 
-Queda disponible en `http://localhost:5077`.
+Los demás microservicios deben ejecutarse utilizando la ruta de su propio proyecto `Api` y el puerto configurado para cada uno.
 
 ## Trabajar con migraciones
 
-- **No ejecutes `migrations add` para configurar tu base.** Eso crea una migración nueva y duplicada. Para tener las tablas solo hace falta `database update`.
-- Cada persona tiene su propia base local: se comparte el esquema, no los datos.
-- **Si cambias las entidades o sus configuraciones**, genera una migración nueva y súbela al repo:
+Las migraciones deben gestionarse de forma independiente para cada microservicio que utilice Entity Framework Core.
 
-```bash
-dotnet ef migrations add NombreDelCambio --project src/Infrastructure --startup-project src/Api --output-dir Persistence/Migrations
+* Si el repositorio ya contiene las migraciones, aplicar las existentes; no generar migraciones nuevas únicamente para configurar una base local.
+* Cuando se modifican las entidades o sus configuraciones, generar una migración nueva en el proyecto correspondiente.
+* Después de incorporar migraciones nuevas mediante Git, aplicar las pendientes a la base de datos local del servicio.
+* No ejecutar comandos de migración apuntando a rutas de otro microservicio.
+* Antes de aplicar migraciones, verificar qué proyecto contiene el `DbContext`, cuál es el proyecto de inicio y dónde se almacenan las migraciones.
+
+Los comandos concretos de Entity Framework Core deben definirse según la estructura real de cada microservicio.
+
+## Desarrollo
+
+Los endpoints y las funcionalidades de cada microservicio se irán incorporando progresivamente. La documentación se actualizará a medida que se agreguen servicios y se definan sus configuraciones.
+## Arquitectura, limites y contratos entre microservicios
+
+El PR #3 divide el backend en cuatro servicios desplegables, con proyectos `Api`,
+`Application`, `Domain` e `Infrastructure`. Cada servicio es responsable de su
+modelo y de su base PostgreSQL; no hay claves foraneas entre bases distintas.
+
+| Servicio | Datos de los que es responsable |
+| --- | --- |
+| Usuarios | Usuario, PerfilLaboral, Cv, Empresa y Notificacion |
+| EmpleosYpostulaciones | Empleo y Postulacion |
+| Chatbot | Chat y Mensaje |
+| Recomendaciones | Recomendacion |
+
+Las dependencias entre capas siguen este criterio:
+
+- `Domain`: entidades, enumeraciones y reglas del dominio; no depende de EF Core ni de HTTP.
+- `Application`: casos de uso y contratos/interfaces; depende de `Domain`, no de `Infrastructure`.
+- `Infrastructure`: EF Core, repositorios y servicios tecnicos; implementa contratos de `Application`.
+- `Api`: endpoints HTTP, autenticacion, autorizacion y composicion de dependencias.
+
+### Identificadores que cruzan servicios
+
+- `Empleo.EmpresaId` y `Empleo.UsuarioId`: referencias a identidades administradas por Usuarios.
+- `Postulacion.UsuarioId` y `Postulacion.CvId`: referencias a Usuarios. `Postulacion.EmpleoId` es una relacion interna del servicio EmpleosYpostulaciones.
+- `Chat.UsuarioId`: referencia al servicio Usuarios.
+- `Recomendacion.UsuarioId` y `Recomendacion.EmpleoId`: referencias a Usuarios y EmpleosYpostulaciones, respectivamente.
+- `Notificacion.ConversacionId`: referencia opcional a Chatbot; `Notificacion.UsuarioId` referencia a Usuarios dentro de su propia base.
+
+Estas referencias externas son identificadores, **no claves foraneas entre bases**.
+Cuando se implementen los casos de uso correspondientes, `Application` debera
+validar existencia, pertenencia y autorizacion mediante contratos, con los
+adaptadores de comunicacion en `Infrastructure`. El PR #3 **no implementa todavia**
+esos casos de uso ni introduce clientes HTTP artificiales.
+
+## Preparacion local de PostgreSQL y migraciones
+
+Se necesita una sola instalacion de PostgreSQL. Como ejemplo, en el entorno local
+se han utilizado estas bases independientes (los nombres son configurables):
+
+| Proyecto de API | Base de datos de ejemplo | Puerto HTTP local |
+| --- | --- | --- |
+| `src/Services/Usuarios/Api/Api.csproj` | `portalempleo_usuarios` | 5078 |
+| `src/Services/EmpleosYpostulaciones/Api/Api.csproj` | `portalempleo_postulaciones` | 5077 |
+| `src/Services/Chatbot/Api/Api.csproj` | `portalempleo_chatbot` | 5079 |
+| `src/Services/Recomendaciones/Api/Api.csproj` | `portalempleo_recomendaciones` | 5080 |
+
+Crear las bases faltantes en PostgreSQL y configurar **por separado**
+`ConnectionStrings:DefaultConnection` en los User Secrets de cada proyecto
+`Api`. Por ejemplo, desde la raiz del backend:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=portalempleo_usuarios;Username=postgres;Password=CAMBIAR" --project src/Services/Usuarios/Api/Api.csproj
 ```
 
-- Después de hacer `git pull` con una migración nueva, vuelve a ejecutar `database update`.
-- Para deshacer la última migración, antes de subirla: `dotnet ef migrations remove --project src/Infrastructure --startup-project src/Api`.
+Repetirlo para los otros tres servicios, modificando el proyecto y el nombre
+de la base. No publicar credenciales ni cadenas de conexion reales en Git.
+
+Las migraciones se aplican **manualmente**, no al iniciar las APIs:
+
+```powershell
+$servicios = @('Usuarios', 'EmpleosYpostulaciones', 'Chatbot', 'Recomendaciones')
+foreach ($servicio in $servicios) {
+    dotnet ef database update `
+        --project "src/Services/$servicio/Infrastructure/Infrastructure.csproj" `
+        --startup-project "src/Services/$servicio/Api/Api.csproj"
+    if ($LASTEXITCODE -ne 0) { throw "Error de migracion en $servicio" }
+}
+```
+
+Revisar cada migracion y confirmar la base de destino **antes** de ejecutarla
+sobre una base que contenga datos importantes. `dotnet build PortalEmpleo.slnx`
+permite compilar la solucion sin ejecutar migraciones.
+
+## Login y JWT (Usuarios)
+
+El endpoint disponible es `POST http://localhost:5078/api/auth/login`.
+Acepta JSON con `email` y `password`, devuelve `accessToken` y
+`expiresAtUtc` si las credenciales son correctas, `401` para credenciales
+invalidas o usuario inactivo, y `400` si el cuerpo no supera la validacion.
+Las contrasenas de los usuarios deben estar almacenadas como hash compatible
+con `PasswordHasher<Usuario>`, no en texto plano.
+
+En `Usuarios/Api/appsettings.json` estan `Jwt:Issuer`, `Jwt:Audience` y
+`Jwt:ExpirationMinutes`. La clave `Jwt:Key` **no se versiona** y, en desarrollo,
+debe cargarse en los User Secrets del mismo proyecto de API. Ejemplo para
+generar y guardar una clave aleatoria de al menos 32 bytes:
+
+```powershell
+$bytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$clave = [Convert]::ToBase64String($bytes)
+dotnet user-secrets set "Jwt:Key" $clave --project src/Services/Usuarios/Api/Api.csproj
+Remove-Variable clave
+```
+
+**No regenerar una clave existente** si hay tokens emitidos que deban seguir
+siendo validos. Para entornos distintos de Development, configurar la clave
+en el gestor de secretos correspondiente.
+
+La API de Usuarios emite tokens JWT y configura su validacion. Eso **no
+significa** que las APIs de los otros tres servicios ya protejan endpoints:
+sus mecanismos de autenticacion se incorporaran con los casos de uso que lo
+requieran. Actualmente no se dispone de un endpoint protegido para demostrar
+un `401` producido por el middleware de JWT.
+
+## Comprobaciones locales de la integracion
+
+Ejecutar cada API con `dotnet run --project src/Services/<Servicio>/Api`.
+En Development, la descripcion OpenAPI se publica en `/openapi/v1.json`
+(por ejemplo, `http://localhost:5078/openapi/v1.json`).
+Los archivos `.http` de cada API contienen solicitudes de ejemplo.
+
+El frontend en desarrollo consume `GET /api/empleos`; **ese controlador aun
+no forma parte del PR #3**, que prepara la estructura de microservicios.
+No se incorpora aqui ese endpoint, ni CORS, ni clientes entre servicios sin
+su caso de uso correspondiente.
