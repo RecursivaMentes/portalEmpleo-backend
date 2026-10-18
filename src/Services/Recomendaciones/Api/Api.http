@@ -1,0 +1,7 @@
+@Recomendaciones_HostAddress = http://localhost:5080
+
+### Esquema OpenAPI (Development)
+GET {{Recomendaciones_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+### Todavia no existen endpoints de negocio de Recomendaciones en PR #3.

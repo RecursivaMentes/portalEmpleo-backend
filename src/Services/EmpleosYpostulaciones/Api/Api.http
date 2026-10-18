@@ -1,0 +1,7 @@
+@Empleos_HostAddress = http://localhost:5077
+
+### Esquema OpenAPI (Development)
+GET {{Empleos_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+### GET /api/empleos aun no esta implementado en el PR #3.

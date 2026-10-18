@@ -1,0 +1,7 @@
+@Chatbot_HostAddress = http://localhost:5079
+
+### Esquema OpenAPI (Development)
+GET {{Chatbot_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+### Todavia no existen endpoints de negocio de Chatbot en PR #3.

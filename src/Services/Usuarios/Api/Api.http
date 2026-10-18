@@ -1,0 +1,20 @@
+@Usuarios_HostAddress = http://localhost:5078
+
+### Esquema OpenAPI (Development)
+GET {{Usuarios_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+### Login negativo: espera HTTP 401 (usuario inexistente)
+POST {{Usuarios_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario-inexistente@ejemplo.com",
+  "password": "clave-incorrecta"
+}
+
+### Login positivo: reemplazar localmente con credenciales validas
+# No guardar contrasenas reales en archivos versionados.
+# POST {{Usuarios_HostAddress}}/api/auth/login
+# Content-Type: application/json
+# { "email": "TU_CORREO", "password": "TU_CONTRASENA" }
