@@ -9,6 +9,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<CompatibilidadService>();
 builder.Services.AddScoped<AnalisisOfertasService>();
+builder.Services.AddScoped<RecomendacionesService>();
 
 builder.Services.AddHttpClient<UsuariosClient>(client =>
 {

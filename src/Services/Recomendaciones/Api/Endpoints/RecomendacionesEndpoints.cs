@@ -30,7 +30,7 @@ public static class RecomendacionesEndpoints
 
                 return Results.Ok(resultado);
             });
-        
+
         app.MapGet("/api/recomendaciones/analizar/{usuarioId:guid}",
             async (
                 Guid usuarioId,
@@ -53,6 +53,30 @@ public static class RecomendacionesEndpoints
                 }
 
                 return Results.Ok(resultados);
+            });
+            
+        app.MapGet("/api/recomendaciones/usuario/{usuarioId:guid}",
+            async (
+                Guid usuarioId,
+                RecomendacionesService service,
+                CancellationToken cancellationToken) =>
+            {
+                if (usuarioId == Guid.Empty)
+                {
+                    return Results.BadRequest(
+                        new { mensaje = "El usuarioId es obligatorio." });
+                }
+
+                var recomendaciones = await service.ObtenerRecomendacionesAsync(
+                    usuarioId, cancellationToken);
+
+                if (recomendaciones is null)
+                {
+                    return Results.NotFound(
+                        new { mensaje = "No se encontró el perfil laboral del usuario." });
+                }
+
+                return Results.Ok(recomendaciones);
             });
     }
 }

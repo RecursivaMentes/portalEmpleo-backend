@@ -70,7 +70,9 @@ public class AnalisisOfertasService
                 Requisitos = empleo.Requisitos
             };
 
-            resultados.Add(_compatibilidadService.Analizar(request));
+            var resultado = _compatibilidadService.Analizar(request);
+            resultado.Titulo = empleo.Titulo;
+            resultados.Add(resultado);
         }
 
         return resultados

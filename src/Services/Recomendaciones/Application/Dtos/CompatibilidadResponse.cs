@@ -12,4 +12,5 @@ public class CompatibilidadResponse
     public List<string> RequisitosFaltantes { get; set; } = new();
 
     public string Motivo { get; set; } = string.Empty;
+    public string Titulo { get; set; } = string.Empty;
 }
