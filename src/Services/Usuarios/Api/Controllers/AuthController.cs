@@ -1,4 +1,5 @@
-﻿using Application.Auth;
+﻿using System.Text.Json;
+using Application.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,42 +33,70 @@ public class AuthController(AuthService authService) : ControllerBase
         CancellationToken cancellationToken)
     {
         var exito = await authService.RegisterAsync(request, cancellationToken);
-
         if (!exito)
-        {
-            return BadRequest(new { message = "El correo electrónico ya está registrado." });
-        }
+            return Conflict(new { message = "El correo electronico ya esta registrado." });
 
-        return Ok(new { message = "Usuario registrado con éxito." });
+        return Ok(new { message = "Usuario registrado con exito." });
     }
 
     [Authorize]
-    [HttpPut("profile")] // Le pasamos el id por parámetro en la URL
+    [HttpPut("profile")]
     public async Task<IActionResult> UpdateProfile(
         [FromBody] UpdateProfileRequest request,
         CancellationToken cancellationToken)
     {
-        //extraigo id del token
         var userIdToken = User.FindFirst("sub")?.Value;
-        
-        if (string.IsNullOrEmpty(userIdToken) || !Guid.TryParse(userIdToken, out var userId))
+        if (!Guid.TryParse(userIdToken, out var userId))
+            return Unauthorized(new { message = "Token invalido." });
+
+        if (request.Nombre is null &&
+            request.Apellido is null &&
+            request.Telefono is null &&
+            request.PreferenciasJson is null &&
+            request.ReglasPostulacion is null)
         {
-            return Unauthorized(new { message = "Token inválido o no proporcionado." });
+            return BadRequest(new { message = "Debe indicar al menos un campo para actualizar." });
         }
 
-        if(string.IsNullOrWhiteSpace(request.Nombre) && string.IsNullOrWhiteSpace(request.Apellido) 
-            && string.IsNullOrWhiteSpace(request.Telefono) && string.IsNullOrWhiteSpace(request.PreferenciasJson) 
-            && string.IsNullOrWhiteSpace(request.ReglasPostulacion)){
-            return BadRequest(new { message = "Debe proporcionar al menos un campo para actualizar (Nombre, Apellido, etc.)." });
+        if ((request.Nombre is not null && string.IsNullOrWhiteSpace(request.Nombre)) ||
+            (request.Apellido is not null && string.IsNullOrWhiteSpace(request.Apellido)))
+        {
+            return BadRequest(new { message = "El nombre y el apellido no pueden estar vacios." });
+        }
+
+        if (request.PreferenciasJson is not null)
+        {
+            try
+            {
+                using var json = JsonDocument.Parse(request.PreferenciasJson);
+                if (json.RootElement.ValueKind != JsonValueKind.Object)
+                    return UnprocessableEntity(new { message = "PreferenciasJson debe ser un objeto JSON." });
+            }
+            catch (JsonException)
+            {
+                return BadRequest(new { message = "PreferenciasJson no contiene JSON valido." });
+            }
         }
 
         var exito = await authService.UpdateAsync(userId, request, cancellationToken);
-
         if (!exito)
-        {
             return NotFound(new { message = "Usuario no encontrado." });
-        }
 
-        return Ok(new { message = "Perfil actualizado con éxito." });
+        return Ok(new { message = "Perfil actualizado con exito." });
+    }
+
+    [Authorize]
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile(CancellationToken cancellationToken)
+    {
+        var userIdToken = User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userIdToken, out var userId))
+            return Unauthorized(new { message = "Token invalido." });
+
+        var perfil = await authService.GetByIdAsync(userId, cancellationToken);
+        if (perfil is null)
+            return NotFound(new { message = "Usuario no encontrado." });
+
+        return Ok(perfil);
     }
 }
