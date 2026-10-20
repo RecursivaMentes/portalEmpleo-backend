@@ -16,4 +16,27 @@ public class UsuarioRepository(AppDbContext db) : IUsuarioRepository
                 x => x.Email == email,
                 cancellationToken);
     }
+
+    public Task<Usuario?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        return db.Usuarios
+            .FirstOrDefaultAsync(
+                x => x.Id == id,
+                cancellationToken);
+    }
+
+    public async Task AddAsync(Usuario usuario, CancellationToken cancellationToken = default)
+    {
+        await db.Usuarios.AddAsync(usuario, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(Usuario usuario, CancellationToken cancellationToken = default)
+    {
+        db.Usuarios.Update(usuario);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
 }
