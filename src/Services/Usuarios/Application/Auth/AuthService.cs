@@ -1,4 +1,6 @@
-﻿using Application.Auth;
+﻿using System.Data;
+using Domain.Enums;
+using Application.Auth;
 using Domain.Entities;
 namespace Application.Auth;
 
@@ -30,46 +32,77 @@ public class AuthService(
             result.ExpiresAtUtc);
     }
 
-    public async Task<bool> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
+    public async Task<bool> RegisterAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken = default)
     {
-        var usuarioExiste = await usuarios.GetByEmailAsync(
-            request.Email,
-            cancellationToken);
+        var email = request.Email.Trim().ToLowerInvariant();
 
-        if(usuarioExiste is not null)
-            return false; //Email duplicado
+        if (await usuarios.GetByEmailAsync(email, cancellationToken) is not null)
+            return false;
 
-        var nuevoUsuario = new Domain.Entities.Usuario
+        var nuevoUsuario = new Usuario
         {
             Id = Guid.NewGuid(),
-            Email=request.Email,
-            Nombre=request.Nombre,
-            Apellido= request.Apellido,
+            Email = email,
+            Nombre = request.Nombre.Trim(),
+            Apellido = request.Apellido.Trim(),
             PreferenciasJson = "{}",
-            Rol=Domain.Enums.RolUsuario.Postulante,
+            Rol = RolUsuario.Postulante,
             FechaRegistro = DateTime.UtcNow,
-            Estado=true
+            Estado = true,
+            PasswordHash = passwords.HashPassword(request.Password)
         };
-        nuevoUsuario.PasswordHash = passwords.HashPassword(request.Password);
-        await usuarios.AddAsync(nuevoUsuario, cancellationToken);
 
-        return true;
+        try
+        {
+            await usuarios.AddAsync(nuevoUsuario, cancellationToken);
+            return true;
+        }
+        catch (DuplicateNameException)
+        {
+            return false;
+        }
     }
-    public async Task<bool> UpdateAsync(Guid usuarioId, UpdateProfileRequest request, CancellationToken cancellationToken)
+    public async Task<bool> UpdateAsync(
+        Guid usuarioId,
+        UpdateProfileRequest request,
+        CancellationToken cancellationToken = default)
     {
-        //Busco usuario por su ID en Postgres
-        var usuario = await usuarios.GetByIdAsync(usuarioId, cancellationToken); 
+        var usuario = await usuarios.GetByIdAsync(usuarioId, cancellationToken);
+        if (usuario is null)
+            return false;
 
-        if (usuario is null) 
-            return false; // Usuario no encontrado
-
-        if (request.Nombre is not null) usuario.Nombre = request.Nombre;
-        if (request.Apellido is not null) usuario.Apellido = request.Apellido;
-        if (request.Telefono is not null) usuario.Telefono = request.Telefono;
-        if (request.PreferenciasJson is not null)usuario.PreferenciasJson = request.PreferenciasJson;
-        if (request.ReglasPostulacion is not null)usuario.ReglasPostulacion = request.ReglasPostulacion;
+        if (request.Nombre is not null)
+            usuario.Nombre = request.Nombre.Trim();
+        if (request.Apellido is not null)
+            usuario.Apellido = request.Apellido.Trim();
+        if (request.Telefono is not null)
+            usuario.Telefono = request.Telefono;
+        if (request.PreferenciasJson is not null)
+            usuario.PreferenciasJson = request.PreferenciasJson;
+        if (request.ReglasPostulacion is not null)
+            usuario.ReglasPostulacion = request.ReglasPostulacion;
 
         await usuarios.UpdateAsync(usuario, cancellationToken);
         return true;
+    }
+
+    public async Task<ProfileResponse?> GetByIdAsync(
+        Guid usuarioId,
+        CancellationToken cancellationToken = default)
+    {
+        var usuario = await usuarios.GetByIdAsync(usuarioId, cancellationToken);
+        if (usuario is null)
+            return null;
+
+        return new ProfileResponse(
+            usuario.Id,
+            usuario.Email,
+            usuario.Nombre,
+            usuario.Apellido,
+            usuario.Telefono,
+            usuario.PreferenciasJson,
+            usuario.ReglasPostulacion);
     }
 }
