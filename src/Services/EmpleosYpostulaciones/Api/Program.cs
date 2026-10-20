@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Application.Empleos;
 using EmpleosYpostulaciones.Infrastructure;
 using EmpleosYpostulaciones.Api.Endpoints;
 
@@ -6,6 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<EmpleoService>();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(
+        new JsonStringEnumConverter());
+});
 
 builder.Services.AddCors(options =>
 {
