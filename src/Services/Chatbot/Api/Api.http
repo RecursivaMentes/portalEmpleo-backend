@@ -1,7 +1,45 @@
 @Chatbot_HostAddress = http://localhost:5079
+@Usuarios_HostAddress = http://localhost:5078
 
 ### Esquema OpenAPI (Development)
 GET {{Chatbot_HostAddress}}/openapi/v1.json
 Accept: application/json
 
-### Todavia no existen endpoints de negocio de Chatbot en PR #3.
+### 1. Obtener un token (servicio Usuarios). Copiar el accessToken en @token.
+POST {{Usuarios_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@ejemplo.com",
+  "password": "TuPassword123"
+}
+
+@token = PEGAR_ACCESS_TOKEN_AQUI
+
+### 2. Crear un chat
+POST {{Chatbot_HostAddress}}/api/chats
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tipo": "Asistente"
+}
+
+### 3. Listar mis chats
+GET {{Chatbot_HostAddress}}/api/chats
+Authorization: Bearer {{token}}
+
+@chatId = PEGAR_ID_DEL_CHAT_AQUI
+
+### 4. Enviar un mensaje (el asistente responde)
+POST {{Chatbot_HostAddress}}/api/chats/{{chatId}}/mensajes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "contenido": "Hola, quiero armar mi perfil laboral. Soy desarrollador backend."
+}
+
+### 5. Ver el historial del chat
+GET {{Chatbot_HostAddress}}/api/chats/{{chatId}}/mensajes
+Authorization: Bearer {{token}}

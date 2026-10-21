@@ -189,3 +189,31 @@ El frontend en desarrollo consume `GET /api/empleos`; **ese controlador aun
 no forma parte del PR #3**, que prepara la estructura de microservicios.
 No se incorpora aqui ese endpoint, ni CORS, ni clientes entre servicios sin
 su caso de uso correspondiente.
+
+## Chatbot (asistente de IA)
+
+El servicio `Chatbot` expone un chat con historial respaldado por Claude (API de Anthropic). Escucha en `http://localhost:5079` y **todos sus endpoints requieren un token JWT** emitido por el servicio Usuarios (`POST /api/auth/login`). El id del usuario se toma del claim `sub` del token.
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| `POST` | `/api/chats` | Crea un chat. Cuerpo opcional: `{ "tipo": "Asistente" }` |
+| `GET` | `/api/chats` | Lista los chats del usuario |
+| `GET` | `/api/chats/{chatId}/mensajes` | Devuelve el historial del chat |
+| `POST` | `/api/chats/{chatId}/mensajes` | Envía `{ "contenido": "..." }`, guarda el mensaje y la respuesta del asistente y devuelve ambos |
+
+Un usuario solo puede ver y escribir en sus propios chats (`404` en caso contrario). Si el asistente no está disponible la API responde `503` y **no se guarda nada**, para que el historial no quede con mensajes sin respuesta. Al modelo se le envían como contexto los últimos 50 mensajes del chat.
+
+Configuración local (desde la raíz del backend; los valores van en user-secrets, nunca en git):
+
+```powershell
+# Base de datos del servicio (ver la sección de PostgreSQL)
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=portalempleo_chatbot;Username=postgres;Password=CAMBIAR" --project src/Services/Chatbot/Api/Api.csproj
+
+# Debe ser la MISMA clave que usa el servicio Usuarios para firmar los tokens
+dotnet user-secrets set "Jwt:Key" "<la misma clave de Usuarios>" --project src/Services/Chatbot/Api/Api.csproj
+
+# Clave de la API de Anthropic (alternativa: variable de entorno ANTHROPIC_API_KEY)
+dotnet user-secrets set "Anthropic:ApiKey" "<tu clave>" --project src/Services/Chatbot/Api/Api.csproj
+```
+
+El modelo y el máximo de tokens por respuesta se cambian en `Anthropic:Model` y `Anthropic:MaxTokens` de `appsettings.json`. Las solicitudes de ejemplo están en `src/Services/Chatbot/Api/Api.http`.
