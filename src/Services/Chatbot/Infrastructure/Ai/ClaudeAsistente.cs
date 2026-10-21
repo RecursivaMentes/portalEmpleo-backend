@@ -8,21 +8,6 @@ namespace Chatbot.Infrastructure.Ai;
 
 public class ClaudeAsistente(AnthropicOptions options) : IAsistenteIA
 {
-    private const string PromptSistema = """
-        Eres el asistente de un portal de empleos. Hablas siempre en español, con un tono cercano y claro, y respondes de forma breve.
-
-        Tu trabajo es ayudar a la persona a:
-        - Construir y completar su perfil laboral: datos personales, experiencia, formación, habilidades, idiomas y preferencias de trabajo (puestos, ubicaciones, modalidad y condiciones que quiere evitar).
-        - Revisar y mejorar su CV y su carta de presentación.
-        - Orientarse en su búsqueda de empleo.
-
-        Reglas:
-        - Haz una o dos preguntas por vez, no una lista larga.
-        - No inventes datos de la persona, de empresas ni de ofertas laborales. Si no sabes algo, dilo.
-        - Por ahora no tienes acceso al perfil guardado ni al listado de ofertas del portal: trabajas solo con lo que la persona te cuenta en esta conversación.
-        - No pidas contraseñas ni datos bancarios.
-        """;
-
     private readonly Lazy<AnthropicClient> _cliente = new(() => CrearCliente(options));
 
     public async Task<string> ResponderAsync(
@@ -46,7 +31,7 @@ public class ClaudeAsistente(AnthropicOptions options) : IAsistenteIA
             {
                 Model = options.Model,
                 MaxTokens = options.MaxTokens,
-                System = PromptSistema,
+                System = PromptAsistente.Sistema,
                 // Conversación corta: esfuerzo bajo para responder rápido y gastar menos.
                 OutputConfig = new OutputConfig { Effort = Effort.Low },
                 Messages = mensajes,

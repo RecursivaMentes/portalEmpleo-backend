@@ -217,3 +217,19 @@ dotnet user-secrets set "Anthropic:ApiKey" "<tu clave>" --project src/Services/C
 ```
 
 El modelo y el máximo de tokens por respuesta se cambian en `Anthropic:Model` y `Anthropic:MaxTokens` de `appsettings.json`. Las solicitudes de ejemplo están en `src/Services/Chatbot/Api/Api.http`.
+
+### Usar Ollama (modelo local, sin costo)
+
+El Chatbot puede usar un modelo local a través de [Ollama](https://ollama.com) en lugar de Claude, útil para desarrollar y probar sin API key. La respuesta es de menor calidad que la de Claude, pero el flujo (autenticación, chats, historial) es el mismo.
+
+1. Instalar Ollama y descargar un modelo (la primera vez baja unos 2 GB): `ollama pull llama3.2`
+2. Verificar que responde: `ollama run llama3.2 "Hola"`
+3. Activarlo solo en tu máquina con user-secrets, para no cambiar el `appsettings.json` compartido:
+
+```powershell
+dotnet user-secrets set "Asistente:Proveedor" "Ollama" --project src/Services/Chatbot/Api/Api.csproj
+```
+
+Para volver a Claude: `dotnet user-secrets remove "Asistente:Proveedor" --project src/Services/Chatbot/Api/Api.csproj`.
+
+Opciones (`appsettings.json`, sección `Ollama`): `BaseUrl` (por defecto `http://localhost:11434`), `Model` (por defecto `llama3.2`) y `TimeoutSegundos` (por defecto 180; la primera respuesta es lenta porque el modelo se carga en memoria). Si Ollama no está corriendo o el modelo no está descargado, la API responde `503`.
