@@ -14,5 +14,11 @@ public interface IAsistenteIA
     /// Genera la respuesta del asistente a partir del historial de la conversación.
     /// El último elemento del historial es el mensaje que hay que responder.
     /// </summary>
-    Task<string> ResponderAsync(IReadOnlyList<MensajeIA> historial, CancellationToken cancellationToken);
+    /// <param name="contextoPerfil">
+    /// Texto con los datos actuales del perfil de la persona, o null si no se pudo obtener.
+    /// </param>
+    Task<string> ResponderAsync(
+        IReadOnlyList<MensajeIA> historial,
+        string? contextoPerfil,
+        CancellationToken cancellationToken);
 }

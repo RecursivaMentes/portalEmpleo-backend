@@ -11,7 +11,7 @@ public class ClaudeAsistente(AnthropicOptions options) : IAsistenteIA
     private readonly Lazy<AnthropicClient> _cliente = new(() => CrearCliente(options));
 
     public async Task<string> ResponderAsync(
-        IReadOnlyList<MensajeIA> historial, CancellationToken cancellationToken)
+        IReadOnlyList<MensajeIA> historial, string? contextoPerfil, CancellationToken cancellationToken)
     {
         var cliente = ObtenerCliente();
 
@@ -31,7 +31,7 @@ public class ClaudeAsistente(AnthropicOptions options) : IAsistenteIA
             {
                 Model = options.Model,
                 MaxTokens = options.MaxTokens,
-                System = PromptAsistente.Sistema,
+                System = PromptAsistente.Construir(contextoPerfil),
                 // Conversación corta: esfuerzo bajo para responder rápido y gastar menos.
                 OutputConfig = new OutputConfig { Effort = Effort.Low },
                 Messages = mensajes,

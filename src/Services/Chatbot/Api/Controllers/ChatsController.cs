@@ -62,7 +62,8 @@ public class ChatsController(ChatService chatService) : ControllerBase
 
         try
         {
-            var respuesta = await chatService.EnviarMensajeAsync(usuarioId, chatId, request, cancellationToken);
+            var respuesta = await chatService.EnviarMensajeAsync(
+                usuarioId, ObtenerAccessToken(), chatId, request, cancellationToken);
 
             return respuesta is null ? ChatNoEncontrado() : Ok(respuesta);
         }
@@ -73,6 +74,16 @@ public class ChatsController(ChatService chatService) : ControllerBase
                 message = "El asistente no está disponible en este momento. Intenta nuevamente más tarde."
             });
         }
+    }
+
+    /// <summary>Token de la petición actual, que se reenvía a Usuarios para consultar el perfil.</summary>
+    private string ObtenerAccessToken()
+    {
+        var header = Request.Headers.Authorization.ToString();
+
+        return header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? header["Bearer ".Length..].Trim()
+            : string.Empty;
     }
 
     private bool TryGetUsuarioId(out Guid usuarioId)

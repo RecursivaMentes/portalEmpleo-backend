@@ -1,9 +1,10 @@
+using Application.Perfil;
 using Domain.Entities;
 using Domain.Enums;
 
 namespace Application.Chats;
 
-public class ChatService(IChatRepository chats, IAsistenteIA asistente)
+public class ChatService(IChatRepository chats, IAsistenteIA asistente, IPerfilUsuarioClient perfiles)
 {
     /// <summary>Cantidad máxima de mensajes previos que se envían al modelo como contexto.</summary>
     private const int LimiteContexto = 50;
@@ -47,11 +48,13 @@ public class ChatService(IChatRepository chats, IAsistenteIA asistente)
     /// Envía un mensaje del usuario, obtiene la respuesta del asistente y guarda ambos.
     /// Devuelve null si el chat no existe o no pertenece al usuario.
     /// </summary>
+    /// <param name="accessToken">Token del usuario, que se reenvía a Usuarios para consultar su perfil.</param>
     /// <exception cref="AsistenteNoDisponibleException">
     /// Si el asistente falla no se guarda nada, así el historial no queda con mensajes sin respuesta.
     /// </exception>
     public async Task<EnviarMensajeResponse?> EnviarMensajeAsync(
-        Guid usuarioId, Guid chatId, EnviarMensajeRequest request, CancellationToken cancellationToken)
+        Guid usuarioId, string accessToken, Guid chatId, EnviarMensajeRequest request,
+        CancellationToken cancellationToken)
     {
         var chat = await chats.ObtenerChatAsync(chatId, usuarioId, cancellationToken);
         if (chat is null) return null;
@@ -71,7 +74,11 @@ public class ChatService(IChatRepository chats, IAsistenteIA asistente)
             .Select(m => new MensajeIA(m.Rol, m.Contenido))
             .ToList();
 
-        var textoRespuesta = await asistente.ResponderAsync(historial, cancellationToken);
+        // El perfil se relee en cada mensaje: así el asistente ve siempre la versión vigente.
+        var perfil = await perfiles.ObtenerAsync(accessToken, cancellationToken);
+        var contextoPerfil = perfil is null ? null : ContextoPerfil.Construir(perfil);
+
+        var textoRespuesta = await asistente.ResponderAsync(historial, contextoPerfil, cancellationToken);
 
         var respuesta = new Mensaje
         {

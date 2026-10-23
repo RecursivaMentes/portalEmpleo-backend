@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 using Application.Chats;
+using Application.Perfil;
 using Chatbot.Infrastructure.Ai;
+using Chatbot.Infrastructure.Clients;
 using Chatbot.Infrastructure.Persistence;
 using Chatbot.Infrastructure.Persistence.Repositories;
 
@@ -18,6 +21,7 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IChatRepository, ChatRepository>();
+        AddUsuarios(services, configuration);
 
         var proveedor = configuration["Asistente:Proveedor"];
 
@@ -37,6 +41,20 @@ public static class DependencyInjection
         }
 
         return services;
+    }
+
+    private static void AddUsuarios(IServiceCollection services, IConfiguration configuration)
+    {
+        var baseUrl = configuration["Servicios:Usuarios:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = "http://localhost:5078";
+
+        if (!Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri))
+            throw new InvalidOperationException($"Servicios:Usuarios:BaseUrl '{baseUrl}' no es una URL válida.");
+
+        // Timeout corto: si Usuarios no responde pronto, el chat sigue sin el perfil.
+        services.AddSingleton<IPerfilUsuarioClient>(sp => new UsuariosClient(
+            new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(10) },
+            sp.GetRequiredService<ILogger<UsuariosClient>>()));
     }
 
     private static void AddClaude(IServiceCollection services, IConfiguration configuration)

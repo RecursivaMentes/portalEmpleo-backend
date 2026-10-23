@@ -203,6 +203,8 @@ El servicio `Chatbot` expone un chat con historial respaldado por Claude (API de
 
 Un usuario solo puede ver y escribir en sus propios chats (`404` en caso contrario). Si el asistente no está disponible la API responde `503` y **no se guarda nada**, para que el historial no quede con mensajes sin respuesta. Al modelo se le envían como contexto los últimos 50 mensajes del chat.
 
+**Perfil como contexto (RF-07).** En cada mensaje el Chatbot consulta el perfil de la persona en el servicio Usuarios, reenviando su mismo token (`GET /api/auth/profile` y `GET /api/perfil-laboral/me`), y se lo entrega al modelo como contexto para que no vuelva a preguntar lo que ya está cargado. Al modelo no se le envían el email ni el teléfono. Si Usuarios no responde (o la persona no tiene perfil laboral), el chat sigue funcionando sin ese contexto. La URL de Usuarios se configura en `Servicios:Usuarios:BaseUrl` (por defecto `http://localhost:5078`). Por ahora el asistente solo **consulta** el perfil; todavía no lo modifica.
+
 Configuración local (desde la raíz del backend; los valores van en user-secrets, nunca en git):
 
 ```powershell

@@ -11,9 +11,9 @@ namespace Chatbot.Infrastructure.Ai;
 public class OllamaAsistente(HttpClient http, OllamaOptions options) : IAsistenteIA
 {
     public async Task<string> ResponderAsync(
-        IReadOnlyList<MensajeIA> historial, CancellationToken cancellationToken)
+        IReadOnlyList<MensajeIA> historial, string? contextoPerfil, CancellationToken cancellationToken)
     {
-        var mensajes = new List<OllamaMensaje> { new("system", PromptAsistente.Sistema) };
+        var mensajes = new List<OllamaMensaje> { new("system", PromptAsistente.Construir(contextoPerfil)) };
 
         mensajes.AddRange(historial
             .Where(m => m.Rol is RolMensaje.Usuario or RolMensaje.Asistente)
