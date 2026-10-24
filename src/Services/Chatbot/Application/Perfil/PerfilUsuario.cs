@@ -33,7 +33,8 @@ public record FormacionUsuario(
     string NivelEducativo,
     string Estado,
     string? FechaInicio,
-    string? FechaFin);
+    string? FechaFin,
+    string? Descripcion);
 
 public record HabilidadUsuario(string Nombre, string? Nivel);
 

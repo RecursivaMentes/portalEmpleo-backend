@@ -23,6 +23,10 @@ public static class DependencyInjection
         services.AddScoped<IChatRepository, ChatRepository>();
         AddUsuarios(services, configuration);
 
+        // Permite apagar las herramientas del perfil (RF-06), por ejemplo con modelos locales que no las llaman bien.
+        var herramientasPerfil = !bool.TryParse(configuration["Asistente:HerramientasPerfil"], out var habilitadas) || habilitadas;
+        services.AddSingleton(new OpcionesChat(herramientasPerfil));
+
         var proveedor = configuration["Asistente:Proveedor"];
 
         switch (string.IsNullOrWhiteSpace(proveedor) ? "Claude" : proveedor.Trim())
@@ -86,8 +90,9 @@ public static class DependencyInjection
             throw new InvalidOperationException($"Ollama:BaseUrl '{ollama.BaseUrl}' no es una URL válida.");
 
         services.AddSingleton(ollama);
-        services.AddSingleton<IAsistenteIA>(_ => new OllamaAsistente(
+        services.AddSingleton<IAsistenteIA>(sp => new OllamaAsistente(
             new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(ollama.TimeoutSegundos) },
-            ollama));
+            ollama,
+            sp.GetRequiredService<ILogger<OllamaAsistente>>()));
     }
 }

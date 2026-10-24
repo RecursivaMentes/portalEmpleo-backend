@@ -205,6 +205,26 @@ Un usuario solo puede ver y escribir en sus propios chats (`404` en caso contrar
 
 **Perfil como contexto (RF-07).** En cada mensaje el Chatbot consulta el perfil de la persona en el servicio Usuarios, reenviando su mismo token (`GET /api/auth/profile` y `GET /api/perfil-laboral/me`), y se lo entrega al modelo como contexto para que no vuelva a preguntar lo que ya está cargado. Al modelo no se le envían el email ni el teléfono. Si Usuarios no responde (o la persona no tiene perfil laboral), el chat sigue funcionando sin ese contexto. La URL de Usuarios se configura en `Servicios:Usuarios:BaseUrl` (por defecto `http://localhost:5078`). Por ahora el asistente solo **consulta** el perfil; todavía no lo modifica.
 
+**Completar el perfil conversando (RF-06).** El asistente puede guardar datos en el perfil mediante herramientas (*tool use*): el modelo decide cuándo llamarlas y el Chatbot las ejecuta contra Usuarios con el token de la persona. Cada herramienta guarda un solo dato:
+
+| Herramienta | Qué hace |
+| --- | --- |
+| `agregar_experiencia` | Agrega una experiencia laboral (fechas `AAAA-MM-DD`) |
+| `agregar_formacion` | Agrega una formación académica |
+| `agregar_habilidad` / `agregar_idioma` | Agrega, o actualiza el nivel si ya existe |
+| `actualizar_resumen` | Reemplaza el resumen profesional |
+| `indicar_sin_experiencia` | Marca que todavía no tiene experiencia (solo si no hay experiencias cargadas) |
+| `actualizar_datos_personales` | Cambia nombre, apellido o teléfono |
+| `actualizar_preferencias` | Reemplaza las listas de preferencias que se envíen |
+
+- Como `PUT /api/perfil-laboral/me` reemplaza el perfil laboral **entero**, el Chatbot lee el perfil vigente, aplica el cambio y lo guarda completo; así el modelo nunca puede borrar datos sin querer. **No hay herramientas de borrado.**
+- Las validaciones de Usuarios (valores permitidos, fechas, "experiencia o sin experiencia") se mantienen. Si Usuarios rechaza un guardado, su mensaje se le devuelve al modelo para que se lo explique a la persona. Por ejemplo, un perfil laboral nuevo no se puede guardar hasta saber si tiene experiencia, y el asistente tiene instrucciones de preguntarlo primero.
+- Las preferencias se guardan en `PreferenciasJson` con este formato: `{ "puestosInteres": [], "ubicaciones": [], "modalidades": ["Presencial"|"Remoto"|"Hibrido"], "excluir": [] }`. Las claves que no maneja el asistente se conservan.
+- Solo se ofrecen herramientas si se pudo leer el perfil. Se apagan con `Asistente:HerramientasPerfil: false`.
+- Máximo de 5 rondas de herramientas por mensaje.
+- Las llamadas a herramientas no se guardan en el historial del chat (solo el texto): el perfil real, releído en cada mensaje, es la fuente de verdad.
+- **Ollama:** no todos los modelos locales soportan herramientas ni las llaman bien. Si el modelo no las soporta, el Chatbot reintenta sin ellas; si las llama mal, apágalas con `Asistente:HerramientasPerfil`.
+
 Configuración local (desde la raíz del backend; los valores van en user-secrets, nunca en git):
 
 ```powershell

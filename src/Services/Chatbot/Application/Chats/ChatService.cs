@@ -1,10 +1,12 @@
+using Application.Herramientas;
 using Application.Perfil;
 using Domain.Entities;
 using Domain.Enums;
 
 namespace Application.Chats;
 
-public class ChatService(IChatRepository chats, IAsistenteIA asistente, IPerfilUsuarioClient perfiles)
+public class ChatService(
+    IChatRepository chats, IAsistenteIA asistente, IPerfilUsuarioClient perfiles, OpcionesChat opciones)
 {
     /// <summary>Cantidad máxima de mensajes previos que se envían al modelo como contexto.</summary>
     private const int LimiteContexto = 50;
@@ -78,7 +80,12 @@ public class ChatService(IChatRepository chats, IAsistenteIA asistente, IPerfilU
         var perfil = await perfiles.ObtenerAsync(accessToken, cancellationToken);
         var contextoPerfil = perfil is null ? null : ContextoPerfil.Construir(perfil);
 
-        var textoRespuesta = await asistente.ResponderAsync(historial, contextoPerfil, cancellationToken);
+        // Solo se ofrecen herramientas si se pudo leer el perfil: sin él no se podría guardar nada con criterio.
+        IEjecutorHerramientas? herramientas = opciones.HerramientasPerfil && perfil is not null
+            ? new HerramientasPerfil(perfiles, accessToken)
+            : null;
+
+        var textoRespuesta = await asistente.ResponderAsync(historial, contextoPerfil, herramientas, cancellationToken);
 
         var respuesta = new Mensaje
         {
