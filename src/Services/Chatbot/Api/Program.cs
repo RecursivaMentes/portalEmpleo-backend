@@ -17,6 +17,16 @@ builder.Services.AddOpenApi();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ChatService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // El token lo emite el servicio Usuarios; acá solo se valida con el mismo Issuer, Audience y clave.
 var issuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException("Falta Jwt:Issuer");
@@ -70,6 +80,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseCors("Frontend");
 
 app.MapControllers();
 
