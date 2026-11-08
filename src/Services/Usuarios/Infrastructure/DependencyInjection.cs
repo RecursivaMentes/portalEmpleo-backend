@@ -23,6 +23,7 @@ public static class DependencyInjection
             options => options.UseNpgsql(connectionString));
 
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<Application.Cvs.ICvRepository, CvRepository>();
         services.AddScoped<IPerfilLaboralRepository, PerfilLaboralRepository>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ITokenService, JwtTokenService>();
