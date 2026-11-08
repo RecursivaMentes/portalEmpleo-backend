@@ -14,6 +14,7 @@ public static class PostulacionesEndpoints
         grupo.MapPost("/", async (
             CrearPostulacionRequest request,
             ClaimsPrincipal usuario,
+            HttpContext httpContext,
             PostulacionService servicio,
             CancellationToken cancellationToken) =>
         {
@@ -27,42 +28,31 @@ public static class PostulacionesEndpoints
                 return Results.Forbid();
             }
 
-            try
-            {
-                var postulacion = await servicio.CrearAsync(
-                    request, cancellationToken);
+            // Se reutiliza el JWT validado por el middleware para consultar Usuarios.
+            var authorization = httpContext.Request.Headers.Authorization.ToString();
+            if (!authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                return Results.Unauthorized();
+            var token = authorization.Substring("Bearer ".Length).Trim();
+            if (string.IsNullOrWhiteSpace(token))
+                return Results.Unauthorized();
 
-                return Results.Created(
-                    $"/api/postulaciones/{postulacion.Id}",
-                    new
-                    {
-                        postulacion.Id,
-                        postulacion.UsuarioId,
-                        postulacion.EmpleoId,
-                        postulacion.CvId,
-                        postulacion.Estado,
-                        postulacion.FechaPostulacion
-                    });
-            }
-            catch (ArgumentException ex)
-            {
-                return Results.BadRequest(
-                    new { mensaje = ex.Message });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Results.NotFound(
-                    new { mensaje = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.Conflict(
-                    new { mensaje = ex.Message });
-            }
+            var postulacion = await servicio.CrearAsync(
+                request, token, cancellationToken);
+
+            return Results.Created(
+                $"/api/postulaciones/{postulacion.Id}",
+                new
+                {
+                    postulacion.Id,
+                    postulacion.UsuarioId,
+                    postulacion.EmpleoId,
+                    postulacion.CvId,
+                    postulacion.Estado,
+                    postulacion.FechaPostulacion
+                });
         });
 
-        grupo.MapGet("/usuario/{usuarioId:guid}", async (
-            Guid usuarioId,
+        grupo.MapGet("/me", async (
             ClaimsPrincipal usuario,
             IPostulacionRepository repository,
             CancellationToken cancellationToken) =>
@@ -72,11 +62,8 @@ public static class PostulacionesEndpoints
             if (!Guid.TryParse(usuarioIdToken, out var usuarioAutenticado))
                 return Results.Unauthorized();
 
-            if (usuarioId != usuarioAutenticado)
-                return Results.Forbid();
-
             var postulaciones = await repository.ObtenerPorUsuarioAsync(
-                usuarioId, cancellationToken);
+                usuarioAutenticado, cancellationToken);
 
             return Results.Ok(postulaciones.Select(p => new
             {

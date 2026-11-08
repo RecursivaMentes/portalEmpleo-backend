@@ -1,18 +1,29 @@
 using System.Text.Json.Serialization;
 using Application.Empleos;
 using Application.Postulaciones;
+using EmpleosYpostulaciones.Infrastructure.Clients;
 using EmpleosYpostulaciones.Infrastructure;
 using EmpleosYpostulaciones.Api.Endpoints;
+using EmpleosYpostulaciones.Api.Exceptions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddExceptionHandler<PostulacionesExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<EmpleoService>();
 builder.Services.AddScoped<PostulacionService>();
+builder.Services.AddHttpClient<ICvValidationClient, CvValidationHttpClient>(client =>
+{
+    var baseUrl = builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl");
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -75,6 +86,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

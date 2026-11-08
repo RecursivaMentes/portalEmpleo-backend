@@ -3,10 +3,11 @@ using Domain.Enums;
 
 namespace Application.Postulaciones;
 
-public class PostulacionService(IPostulacionRepository repository)
+public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation)
 {
     public async Task<Postulacion> CrearAsync(
         CrearPostulacionRequest request,
+        string token,
         CancellationToken cancellationToken = default)
     {
         if (request.UsuarioId == Guid.Empty ||
@@ -34,14 +35,16 @@ public class PostulacionService(IPostulacionRepository repository)
                 "La oferta laboral ya finalizó.");
         }
 
+        if (!await cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, cancellationToken))
+            throw new KeyNotFoundException("El CV no existe o no pertenece al usuario.");
+
         bool yaPostulado = await repository.ExistePostulacionAsync(
             request.UsuarioId,
             request.EmpleoId,
             cancellationToken);
 
         if (yaPostulado)
-            throw new InvalidOperationException(
-                "El usuario ya se postuló a esta oferta.");
+            throw new InvalidOperationException("El usuario ya se postulo a esta oferta.");
 
         var postulacion = new Postulacion
         {

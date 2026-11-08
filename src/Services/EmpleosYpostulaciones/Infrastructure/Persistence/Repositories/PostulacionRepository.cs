@@ -1,6 +1,7 @@
 using Application.Postulaciones;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace EmpleosYpostulaciones.Infrastructure.Persistence.Repositories;
 
@@ -32,7 +33,17 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         CancellationToken cancellationToken = default)
     {
         await db.Postulaciones.AddAsync(postulacion, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException pg &&
+            pg.SqlState == PostgresErrorCodes.UniqueViolation &&
+            pg.ConstraintName == "IX_postulaciones_UsuarioId_EmpleoId")
+        {
+            throw new InvalidOperationException("El usuario ya se postulÃ³ a esta oferta.");
+        }
     }
 
     public Task<List<Postulacion>> ObtenerPorUsuarioAsync(
