@@ -1,10 +1,12 @@
 using Application.Auth;
+using Application.Notificaciones;
 using Application.PerfilLaboral;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Usuarios.Infrastructure.Persistence.Repositories;
 using Usuarios.Infrastructure.Security;
+using Usuarios.Infrastructure.Workers;
 
 namespace Usuarios.Infrastructure;
 
@@ -25,6 +27,11 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<Application.Cvs.ICvRepository, CvRepository>();
         services.AddScoped<IPerfilLaboralRepository, PerfilLaboralRepository>();
+        services.AddScoped<INotificacionRepository, NotificacionRepository>();
+
+        services.AddSingleton<INotificacionQueue, NotificacionQueue>();
+        services.AddHostedService<NotificacionWorker>();
+
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ITokenService, JwtTokenService>();
 
