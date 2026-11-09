@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -7,75 +8,74 @@ using Microsoft.Extensions.Logging;
 
 namespace Chatbot.Infrastructure.Clients;
 
-/// <summary>Crea CV en el servicio Usuarios (POST api/cvs) reenviando el token de la persona.</summary>
+/// <summary>Lee, crea y edita CV en el servicio Usuarios (api/cvs) reenviando el token de la persona.</summary>
 public class CvUsuarioClient(HttpClient http, ILogger<CvUsuarioClient> logger) : ICvUsuarioClient
 {
     private static readonly JsonSerializerOptions OpcionesJson = new(JsonSerializerDefaults.Web);
 
-    public async Task<ResultadoObtenerCv> ObtenerAsync(
-        string accessToken, Guid cvId, CancellationToken cancellationToken)
+    public async Task<ResultadoListarCvs> ListarAsync(string accessToken, CancellationToken cancellationToken)
     {
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"api/cvs/{cvId}");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var r = await PedirAsync<List<CvUsuario>>(HttpMethod.Get, "api/cvs", accessToken, null, cancellationToken);
+        return new ResultadoListarCvs(r.Dato, r.Mensaje);
+    }
 
-            using var response = await http.SendAsync(request, cancellationToken);
+    public async Task<ResultadoObtenerCv> ObtenerAsync(string accessToken, Guid cvId, CancellationToken cancellationToken)
+    {
+        var r = await PedirAsync<CvUsuario>(HttpMethod.Get, $"api/cvs/{cvId}", accessToken, null, cancellationToken);
+        return new ResultadoObtenerCv(r.Dato, r.NoEncontrado, r.Mensaje);
+    }
 
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                return new ResultadoObtenerCv(null, NoEncontrado: true, Mensaje: "No encontramos ese CV.");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("Usuarios respondió {Status} en GET api/cvs/{{id}}.", (int)response.StatusCode);
-                return new ResultadoObtenerCv(null, Mensaje: await LectorErroresUsuarios.LeerMensajeAsync(response, cancellationToken));
-            }
-
-            var cv = await response.Content.ReadFromJsonAsync<CvUsuario>(OpcionesJson, cancellationToken);
-            return cv is null
-                ? new ResultadoObtenerCv(null, Mensaje: "El servicio de perfiles devolvió una respuesta vacía.")
-                : new ResultadoObtenerCv(cv);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException
-                                   && !cancellationToken.IsCancellationRequested)
-        {
-            logger.LogWarning(ex, "No se pudo leer el CV en el servicio Usuarios.");
-            return new ResultadoObtenerCv(null, Mensaje: "No se pudo comunicar con el servicio de perfiles.");
-        }
+    public async Task<ResultadoObtenerCv> ActualizarTextoAsync(
+        string accessToken, Guid cvId, string textoPlano, CancellationToken cancellationToken)
+    {
+        var r = await PedirAsync<CvUsuario>(
+            HttpMethod.Put, $"api/cvs/{cvId}", accessToken, new { textoPlano }, cancellationToken);
+        return new ResultadoObtenerCv(r.Dato, r.NoEncontrado, r.Mensaje);
     }
 
     public async Task<ResultadoCrearCv> CrearAsync(
         string accessToken, string titulo, string textoPlano, bool esPrincipal, CancellationToken cancellationToken)
     {
+        var r = await PedirAsync<CvUsuario>(
+            HttpMethod.Post, "api/cvs", accessToken, new { titulo, textoPlano, esPrincipal }, cancellationToken);
+        return new ResultadoCrearCv(r.Dato, r.Mensaje);
+    }
+
+    private sealed record Respuesta<T>(T? Dato, bool NoEncontrado = false, string? Mensaje = null);
+
+    private async Task<Respuesta<T>> PedirAsync<T>(
+        HttpMethod metodo, string ruta, string accessToken, object? cuerpo, CancellationToken cancellationToken)
+    {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "api/cvs")
-            {
-                Content = new StringContent(
-                    JsonSerializer.Serialize(new { titulo, textoPlano, esPrincipal }, OpcionesJson),
-                    Encoding.UTF8, "application/json"),
-            };
+            using var request = new HttpRequestMessage(metodo, ruta);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            if (cuerpo is not null)
+                request.Content = new StringContent(
+                    JsonSerializer.Serialize(cuerpo, OpcionesJson), Encoding.UTF8, "application/json");
 
             using var response = await http.SendAsync(request, cancellationToken);
 
-            if (response.IsSuccessStatusCode)
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return new Respuesta<T>(default, NoEncontrado: true, Mensaje: "No encontramos ese CV.");
+
+            if (!response.IsSuccessStatusCode)
             {
-                var cv = await response.Content.ReadFromJsonAsync<CvUsuario>(OpcionesJson, cancellationToken);
-                return cv is null
-                    ? new ResultadoCrearCv(null, "El servicio de perfiles devolvió una respuesta vacía.")
-                    : new ResultadoCrearCv(cv);
+                // El cuerpo puede contener un CV (datos personales): se registra solo el estado.
+                logger.LogWarning("Usuarios respondió {Status} en {Metodo} api/cvs.", (int)response.StatusCode, metodo);
+                return new Respuesta<T>(default, Mensaje: await LectorErroresUsuarios.LeerMensajeAsync(response, cancellationToken));
             }
 
-            // El cuerpo contiene un CV (datos personales): se registra solo el estado, nunca el contenido.
-            logger.LogWarning("Usuarios respondió {Status} en POST api/cvs.", (int)response.StatusCode);
-            return new ResultadoCrearCv(null, await LectorErroresUsuarios.LeerMensajeAsync(response, cancellationToken));
+            var dato = await response.Content.ReadFromJsonAsync<T>(OpcionesJson, cancellationToken);
+            return dato is null
+                ? new Respuesta<T>(default, Mensaje: "El servicio de perfiles devolvió una respuesta vacía.")
+                : new Respuesta<T>(dato);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException
                                    && !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "No se pudo crear el CV en el servicio Usuarios.");
-            return new ResultadoCrearCv(null, "No se pudo comunicar con el servicio de perfiles.");
+            logger.LogWarning(ex, "No se pudo comunicar con el servicio Usuarios ({Metodo} api/cvs).", metodo);
+            return new Respuesta<T>(default, Mensaje: "No se pudo comunicar con el servicio de perfiles.");
         }
     }
 }

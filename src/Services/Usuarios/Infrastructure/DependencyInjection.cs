@@ -35,7 +35,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IExtractorTextoCv, ExtractorTextoCv>();
 
-        // Generador del documento descargable del CV (hoy solo PDF).
+        // Generador del documento descargable del CV (solo PDF).
         services.AddSingleton<IGeneradorDocumentoCv, GeneradorPdfCv>();
 
         // Los archivos de CV se guardan en una carpeta. "Almacenamiento:RutaCvs" puede ser absoluta
