@@ -37,11 +37,8 @@ public class ExtractorTextoCv(ILogger<ExtractorTextoCv> logger) : IExtractorText
         }
         catch (Exception ex)
         {
-            // Se atrapa cualquier excepción a propósito: las librerías de lectura de documentos pueden
-            // fallar de muchas formas con archivos dañados o hechos a medida, y en todos los casos
-            // lo correcto es lo mismo: tratar el archivo como "sin texto legible", no romper la subida.
-            // No es un fallo del servidor sino un archivo que no se puede leer: una línea de aviso alcanza
-            // y el detalle completo queda en nivel Debug.
+            // Cualquier falla de las librerías (archivo dañado o hecho a medida) se trata como "sin texto legible" para no
+            // romper la subida. No es un fallo del servidor: va un aviso de una línea y el detalle en nivel Debug.
             logger.LogWarning("No se pudo extraer el texto de un archivo {Extension}: {Motivo}", extension, ex.Message);
             logger.LogDebug(ex, "Detalle del error al extraer texto de un archivo {Extension}.", extension);
             return string.Empty;
@@ -72,9 +69,7 @@ public class ExtractorTextoCv(ILogger<ExtractorTextoCv> logger) : IExtractorText
         using var zip = new ZipArchive(new MemoryStream(contenido), ZipArchiveMode.Read);
         var texto = new StringBuilder();
 
-        // Muchos CV ponen el nombre y los datos de contacto en el encabezado de la página:
-        // viven en partes aparte (word/header1.xml...), así que se leen primero.
-        // Los encabezados "primera página / par / impar" suelen repetirse: se quitan los repetidos.
+        // Muchos CV ponen el nombre y el contacto en el encabezado (word/header*.xml): se leen primero, sin repetidos.
         var vistos = new HashSet<string>(StringComparer.Ordinal);
         var encabezados = zip.Entries
             .Where(e => e.FullName.StartsWith("word/header", StringComparison.Ordinal)

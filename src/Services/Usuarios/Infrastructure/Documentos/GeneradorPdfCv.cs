@@ -10,9 +10,8 @@ public class GeneradorPdfCv : IGeneradorDocumentoCv
 {
     static GeneradorPdfCv()
     {
-        // QuestPDF es gratis (licencia Community) para personas, proyectos académicos, organizaciones sin
-        // fines de lucro y empresas con menos de 1 millón de dólares de ingresos anuales. Si el proyecto
-        // llegara a otro caso, hay que revisar la licencia: https://www.questpdf.com/license/
+        // QuestPDF es gratis (licencia Community) para proyectos académicos, personas y empresas de menos de 1 millón de
+        // dólares anuales; en otro caso hay que revisar la licencia: https://www.questpdf.com/license/
         QuestPDF.Settings.License = LicenseType.Community;
 
         // El CV es texto libre de una persona: puede traer caracteres que la fuente no tiene (un emoji).
@@ -20,7 +19,6 @@ public class GeneradorPdfCv : IGeneradorDocumentoCv
         QuestPDF.Settings.ThrowOnMissingTextGlyphs = false;
     }
 
-    public FormatoDocumentoCv Formato => FormatoDocumentoCv.Pdf;
     public string ContentType => ArchivosCv.ContentTypePdf;
     public string Extension => ".pdf";
 

@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Chatbot.Api.Controllers;
 
 /// <summary>
-/// Generación de CV con IA a partir del perfil laboral (RF-11). El CV resultante se guarda en el servicio
-/// Usuarios, que es quien administra los CV (verlos, editarlos y descargarlos se hace allí: api/cvs).
+/// Generación de CV con IA a partir del perfil laboral (RF-11). El CV se guarda en Usuarios, que es quien
+/// administra los CV (verlos, editarlos y descargarlos se hace allí: api/cvs).
 /// </summary>
 [ApiController]
 [Authorize]
@@ -15,10 +15,7 @@ namespace Chatbot.Api.Controllers;
 public class GeneracionCvController(GeneracionCvService generacion, ILogger<GeneracionCvController> logger)
     : ControllerBase
 {
-    /// <summary>
-    /// Genera un CV nuevo con IA y lo guarda. Responde 201 con el CV creado (mismo formato que api/cvs/{id}
-    /// de Usuarios). Puede tardar: con un modelo local, un minuto o más.
-    /// </summary>
+    /// <summary>Genera un CV nuevo con IA y lo guarda. Responde 201 con el CV creado. Puede tardar.</summary>
     [HttpPost]
     public async Task<IActionResult> Generar(
         [FromBody] GenerarCvRequest? request, CancellationToken cancellationToken)
@@ -51,39 +48,18 @@ public class GeneracionCvController(GeneracionCvService generacion, ILogger<Gene
         if (resultado.Exito)
             return StatusCode(StatusCodes.Status201Created, resultado.Cv);
 
-        switch (resultado.Motivo)
+        return resultado.Motivo switch
         {
-            case MotivoErrorGeneracion.YaEnCurso:
-                return Conflict(new { message = resultado.Mensaje });
+            MotivoErrorGeneracion.YaEnCurso => Conflict(new { message = resultado.Mensaje }),
+            MotivoErrorGeneracion.PerfilNoDisponible => StatusCode(503, new { message = resultado.Mensaje }),
+            MotivoErrorGeneracion.PerfilIncompleto => BadRequest(new { message = resultado.Mensaje }),
+            MotivoErrorGeneracion.IaNoFiable => StatusCode(502, new { message = resultado.Mensaje }),
 
-            case MotivoErrorGeneracion.PerfilNoDisponible:
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = resultado.Mensaje });
-
-            case MotivoErrorGeneracion.PerfilIncompleto:
-                return BadRequest(new { message = resultado.Mensaje });
-
-            case MotivoErrorGeneracion.IaNoFiable:
-                // Solo cantidad y motivos de los controles; el texto del CV no se registra (son datos personales).
-                logger.LogWarning(
-                    "El CV generado no pasó los controles de fidelidad ({Cantidad} problemas).",
-                    resultado.Problemas?.Count ?? 0);
-                return StatusCode(StatusCodes.Status502BadGateway, new
-                {
-                    message = resultado.Mensaje,
-                    problemas = resultado.Problemas,
-                });
-
-            default:
-                // El CV se redactó bien pero Usuarios no lo aceptó: se devuelve el texto para no perder el trabajo.
-                return UnprocessableEntity(new
-                {
-                    message = resultado.Mensaje,
-                    textoGenerado = resultado.TextoGenerado,
-                });
-        }
+            // El CV se redactó bien pero Usuarios no lo aceptó: se devuelve el texto para no perder el trabajo.
+            _ => UnprocessableEntity(new { message = resultado.Mensaje, textoGenerado = resultado.TextoGenerado }),
+        };
     }
 
-    /// <summary>Token de la petición actual, que se reenvía a Usuarios.</summary>
     private string ObtenerAccessToken()
     {
         var header = Request.Headers.Authorization.ToString();

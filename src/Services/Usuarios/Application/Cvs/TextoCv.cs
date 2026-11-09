@@ -3,11 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace Application.Cvs;
 
-/// <summary>
-/// Limpieza del texto que sale de un archivo. Los extractores devuelven texto "crudo" (con espacios
-/// repetidos, saltos de línea de más, caracteres raros); acá se deja en una forma uniforme y segura
-/// para guardarlo en la base y mostrárselo a la persona o a la IA.
-/// </summary>
+/// <summary>Deja el texto extraído de un archivo en una forma uniforme y segura para guardarlo y mostrarlo.</summary>
 public static partial class TextoCv
 {
     // "ﬁ", "ﬂ"... son ligaduras tipográficas que los PDF usan como un solo carácter: se separan en letras.
@@ -16,10 +12,7 @@ public static partial class TextoCv
         ("ﬀ", "ff"), ("ﬁ", "fi"), ("ﬂ", "fl"), ("ﬃ", "ffi"), ("ﬄ", "ffl"),
     ];
 
-    /// <summary>
-    /// Devuelve el texto limpio y recortado a <see cref="CvService.MaxLargoTexto"/> caracteres,
-    /// o null si no quedó nada (archivo sin texto).
-    /// </summary>
+    /// <summary>Texto limpio y recortado al máximo permitido, o null si no quedó nada.</summary>
     public static string? Normalizar(string? crudo)
     {
         if (string.IsNullOrWhiteSpace(crudo)) return null;
@@ -77,9 +70,8 @@ public static partial class TextoCv
     }
 
     /// <summary>
-    /// Quita lo que no se puede guardar ni dibujar en ningún lado, sin tocar el resto (ni los espacios):
-    /// caracteres de control (incluido el NUL, que PostgreSQL rechaza y daría un error 500) y mitades
-    /// de emoji sueltas. Se conservan los saltos de línea y tabulaciones salvo que se pida lo contrario.
+    /// Quita solo lo que no se puede guardar: caracteres de control (el NUL hacía fallar PostgreSQL con un 500) y
+    /// mitades de emoji sueltas. No toca los espacios; conserva saltos de línea y tabulaciones salvo que se indique.
     /// </summary>
     public static string QuitarCaracteresInvalidos(string texto, bool conservarSaltosDeLinea = true)
     {

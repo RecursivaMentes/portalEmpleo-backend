@@ -1,14 +1,8 @@
 namespace Application.Cvs;
 
-/// <summary>
-/// Genera un documento descargable (PDF, Word...) a partir de los bloques de un CV.
-/// Hay una implementación por formato; <see cref="CvService"/> elige la que corresponde.
-/// Agregar un formato nuevo es escribir otra clase que implemente esta interfaz y registrarla.
-/// </summary>
+/// <summary>Genera el documento descargable de un CV (hoy PDF) a partir de sus bloques.</summary>
 public interface IGeneradorDocumentoCv
 {
-    FormatoDocumentoCv Formato { get; }
-
     string ContentType { get; }
 
     /// <summary>Extensión con punto, por ejemplo ".pdf".</summary>

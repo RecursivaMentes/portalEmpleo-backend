@@ -8,10 +8,10 @@ namespace Chatbot.Api.Controllers;
 public record AnalizarCvRequest(Guid CvId);
 
 /// <summary>
-/// Importar datos de un CV al perfil laboral (RF-09) y detectar qué datos faltan (RF-10).
-/// Se hace en dos pasos para que la persona controle lo que entra a su perfil:
-///   1. POST api/analisis-cv          → la IA lee el CV y devuelve una PROPUESTA. No se guarda nada.
-///   2. POST api/analisis-cv/aplicar  → la persona confirma (o ajusta) y recién ahí se guarda en el perfil.
+/// Importar datos de un CV al perfil laboral (RF-09) y detectar qué datos faltan (RF-10), en dos pasos para que la
+/// persona controle lo que entra a su perfil:
+///   1. POST api/analisis-cv          → la IA lee el CV y devuelve una propuesta. No se guarda nada.
+///   2. POST api/analisis-cv/aplicar  → la persona confirma (o ajusta) y recién ahí se guarda.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -54,10 +54,7 @@ public class AnalisisCvController(
         };
     }
 
-    /// <summary>
-    /// Guarda en el perfil lo que la persona confirmó. Nunca borra ni modifica datos existentes: solo agrega
-    /// lo que todavía no está. Con <c>iniciarChat</c> deja un chat abierto con las preguntas por lo que falta.
-    /// </summary>
+    /// <summary>Guarda en el perfil lo que la persona confirmó. Nunca borra ni modifica datos existentes: solo agrega.</summary>
     [HttpPost("aplicar")]
     public async Task<IActionResult> Aplicar(
         [FromBody] AplicarPropuestaRequest? request, CancellationToken cancellationToken)

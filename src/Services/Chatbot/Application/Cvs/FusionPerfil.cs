@@ -24,11 +24,9 @@ public record ResultadoFusion(
     string? TelefonoNuevo);
 
 /// <summary>
-/// Combina lo importado de un CV con el perfil que la persona ya tiene. Reglas:
-///  - nunca se borra ni se modifica nada de lo existente: solo se AGREGA lo que todavía no está;
-///  - dos datos son "el mismo" si coinciden los campos que los identifican (ver las claves de abajo);
-///  - el resumen y el teléfono solo se completan si estaban vacíos, para no pisar lo que la persona escribió.
-/// Usuarios reemplaza el perfil laboral entero al guardar, por eso el resultado es el perfil COMPLETO.
+/// Combina lo importado de un CV con el perfil existente. Nunca borra ni modifica lo que ya está: solo agrega lo que
+/// falta (dos datos son el mismo si coinciden sus campos clave), y el resumen y el teléfono solo se completan si
+/// estaban vacíos. Usuarios reemplaza el perfil laboral entero al guardar, por eso el resultado es el perfil completo.
 /// </summary>
 public static class FusionPerfil
 {

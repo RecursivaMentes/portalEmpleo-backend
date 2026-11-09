@@ -148,18 +148,16 @@ public class CvsController(CvService cvs) : ControllerBase
     }
 
     /// <summary>
-    /// Descarga el CV generado a partir de su contenido, en PDF (por defecto) o Word:
-    /// GET api/cvs/{id}/descargar?formato=pdf|docx.
+    /// Descarga el CV en PDF, generado a partir de su contenido de texto.
     /// </summary>
     [HttpGet("{cvId:guid}/descargar")]
-    public async Task<IActionResult> Descargar(
-        Guid cvId, [FromQuery] string? formato, CancellationToken cancellationToken)
+    public async Task<IActionResult> Descargar(Guid cvId, CancellationToken cancellationToken)
     {
         if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
 
         try
         {
-            var documento = await cvs.GenerarDocumentoAsync(usuarioId, cvId, formato, cancellationToken);
+            var documento = await cvs.GenerarDocumentoAsync(usuarioId, cvId, cancellationToken);
             if (documento is null) return CvNoEncontrado();
 
             Response.Headers["X-Content-Type-Options"] = "nosniff";

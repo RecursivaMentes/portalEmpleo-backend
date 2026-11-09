@@ -5,10 +5,7 @@ namespace Application.Cvs;
 /// <summary>Un dato propuesto para el perfil. <see cref="YaEnPerfil"/> es true si la persona ya lo tiene cargado.</summary>
 public record ItemPropuesto<T>(T Dato, bool YaEnPerfil);
 
-/// <summary>
-/// Datos del perfil que se entendieron de un CV. Es solo una PROPUESTA: no se guarda nada hasta que
-/// la persona la confirma (ver <see cref="AplicacionPropuestaService"/>).
-/// </summary>
+/// <summary>Datos del perfil que se entendieron de un CV. Es solo una propuesta: no se guarda hasta que se confirma.</summary>
 public record PropuestaPerfil(
     string? Resumen,
     string? Telefono,
@@ -19,7 +16,7 @@ public record PropuestaPerfil(
 
 /// <summary>
 /// Algo que el CV menciona pero que no se puede importar porque falta un dato que el perfil exige
-/// (por ejemplo, una experiencia sin fecha de inicio). Sirve para preguntárselo a la persona.
+/// (por ejemplo, una experiencia sin fecha de inicio). Se le pregunta a la persona.
 /// </summary>
 /// <param name="Tipo">"experiencia", "formacion" o "idioma".</param>
 public record ItemIncompleto(string Tipo, string Descripcion, IReadOnlyList<string> Faltan);
@@ -32,5 +29,4 @@ public record ResultadoAnalisis(
     PropuestaPerfil Propuesta,
     IReadOnlyList<ItemIncompleto> Incompletos,
     IReadOnlyList<Faltante> Faltantes,
-    int Descartados,
     IReadOnlyList<string> Avisos);

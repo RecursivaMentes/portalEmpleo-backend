@@ -5,9 +5,8 @@ using Application.Perfil;
 namespace Application.Cvs;
 
 /// <summary>
-/// Arma lo que se le entrega al modelo para redactar un CV: las instrucciones fijas y los datos de la persona.
-/// Todo lo que se puede resolver con código se resuelve acá (orden, formato de fechas) para que el modelo
-/// no tenga que calcular ni deducir nada: cuanto menos decida el modelo, menos puede inventar.
+/// Instrucciones y datos para que el modelo redacte un CV. Lo que se puede resolver con código (orden, formato de
+/// fechas) se resuelve acá, para que el modelo no tenga que calcular nada y pueda inventar menos.
 /// </summary>
 public static class PromptGeneracionCv
 {
@@ -138,28 +137,7 @@ public static class PromptGeneracionCv
         return texto.Length <= MaxCaracteresDatos ? texto : texto[..MaxCaracteresDatos];
     }
 
-    /// <summary>
-    /// El mensaje que se le manda al modelo. Si es un reintento, se le dicen los problemas de la versión anterior.
-    /// </summary>
-    public static string ConstruirSolicitud(string datos, IReadOnlyList<string>? problemasPrevios = null)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("<datos>");
-        sb.AppendLine(datos);
-        sb.AppendLine("</datos>");
-        sb.AppendLine();
-        sb.AppendLine("Escribí el CV.");
-
-        if (problemasPrevios is { Count: > 0 })
-        {
-            sb.AppendLine();
-            sb.AppendLine("ATENCIÓN: tu versión anterior tuvo estos problemas:");
-            foreach (var problema in problemasPrevios) sb.AppendLine("- " + problema);
-            sb.AppendLine("Escribí de nuevo el CV completo corrigiéndolos y respetando todas las reglas.");
-        }
-
-        return sb.ToString().TrimEnd();
-    }
+    public static string ConstruirSolicitud(string datos) => $"<datos>\n{datos}\n</datos>\n\nEscribí el CV.";
 
     public static string NombreCompleto(PerfilUsuario perfil) =>
         $"{perfil.Nombre} {perfil.Apellido}".Trim();

@@ -7,22 +7,17 @@ using Domain.Entities;
 namespace Application.Cvs;
 
 /// <summary>
-/// Gestión de los CV de una persona. Reglas:
-/// - Cada persona ve y modifica solo sus CV.
-/// - Siempre hay un solo CV principal: el primero que se crea lo es, y marcar otro como principal
-///   deja de serlo al anterior. Si se elimina el principal, pasa a serlo el más reciente.
-/// - Hay un máximo de CV por persona.
-/// - Un CV puede tener un archivo (PDF o .docx) guardado en <see cref="IAlmacenamientoArchivos"/>.
-///   El archivo se escribe antes que la base y se borra después de ella, para no dejar nunca
-///   un CV apuntando a un archivo que no existe (lo peor que puede pasar es un archivo huérfano).
-/// - Al subir un archivo se extrae su texto y se guarda como contenido del CV (<see cref="IExtractorTextoCv"/>).
+/// Gestión de los CV de una persona. Cada persona ve y modifica solo los suyos; siempre hay un único CV principal
+/// (el primero que se crea; si se elimina, pasa a serlo el más reciente) y hay un máximo por persona.
+/// El archivo de un CV se escribe antes que la base y se borra después, para que nunca quede un CV apuntando a
+/// un archivo inexistente (lo peor que puede pasar es un archivo huérfano).
 /// </summary>
 public class CvService(
     ICvRepository cvs,
     IUsuarioRepository usuarios,
     IAlmacenamientoArchivos archivos,
     IExtractorTextoCv extractor,
-    IEnumerable<IGeneradorDocumentoCv> generadores)
+    IGeneradorDocumentoCv generador)
 {
     public const int MaxCvsPorUsuario = 25;
     public const int MaxLargoTitulo = 200;
@@ -58,10 +53,7 @@ public class CvService(
         return ToResponse(cv);
     }
 
-    /// <summary>
-    /// Crea un CV a partir de un archivo subido (RF-08). El archivo se valida y se guarda;
-    /// el título es opcional (por defecto, el nombre del archivo).
-    /// </summary>
+    /// <summary>Crea un CV a partir de un archivo subido (RF-08); el título es opcional (por defecto, el nombre del archivo).</summary>
     public async Task<CvResponse?> CrearDesdeArchivoAsync(
         Guid usuarioId, ArchivoSubido archivo, string? titulo, bool esPrincipal,
         CancellationToken cancellationToken = default)
@@ -131,10 +123,8 @@ public class CvService(
     }
 
     /// <summary>
-    /// Vuelve a leer el texto del archivo guardado y lo pone como contenido del CV (RF-09, primera parte).
-    /// Sirve cuando el texto se borró o se editó y se quiere recuperar el original del archivo.
-    /// Devuelve null si el CV no existe; lanza <see cref="ValidationException"/> si no hay archivo
-    /// o no se pudo sacar texto de él.
+    /// Vuelve a leer el texto del archivo guardado y lo pone como contenido del CV. Devuelve null si el CV no existe;
+    /// lanza <see cref="ValidationException"/> si no hay archivo o no se pudo sacar texto de él.
     /// </summary>
     public async Task<CvResponse?> ExtraerTextoAsync(
         Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
@@ -187,25 +177,16 @@ public class CvService(
             : new ArchivoDescarga(contenido, contentType, NombreDescarga(cv.Titulo, extension));
     }
 
-    /// <summary>
-    /// Genera el CV como documento descargable (RF-13) a partir de su contenido de texto.
-    /// Es distinto de <see cref="DescargarArchivoAsync"/>, que devuelve el archivo original que se subió:
-    /// este se arma de nuevo, con un formato prolijo, y refleja las ediciones hechas al texto.
-    /// Devuelve null si el CV no existe; lanza <see cref="ValidationException"/> si el formato no es válido
-    /// o el CV no tiene contenido.
-    /// </summary>
+    /// <summary>Genera el PDF del CV a partir de su texto (RF-13). A diferencia del archivo original, refleja las ediciones.</summary>
     public async Task<ArchivoDescarga?> GenerarDocumentoAsync(
-        Guid usuarioId, Guid cvId, string? formato, CancellationToken cancellationToken = default)
+        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
 
         var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
         if (cv is null) return null;
 
-        var generador = ElegirGenerador(formato);
-
-        // La misma limpieza que se aplica al texto extraído: también protege de caracteres que
-        // se hayan colado al editar el texto a mano.
+        // Misma limpieza que el texto extraído: también cubre caracteres colados al editar a mano.
         var texto = TextoCv.Normalizar(cv.TextoPlano)
             ?? throw new ValidationException(
                 "Este CV no tiene contenido para descargar. Escribilo o subí un archivo que tenga texto.");
@@ -216,19 +197,6 @@ public class CvService(
             new MemoryStream(bytes, writable: false),
             generador.ContentType,
             NombreDescarga(cv.Titulo, generador.Extension));
-    }
-
-    private IGeneradorDocumentoCv ElegirGenerador(string? formato)
-    {
-        var buscado = (string.IsNullOrWhiteSpace(formato) ? "pdf" : formato.Trim().ToLowerInvariant()) switch
-        {
-            "pdf" => FormatoDocumentoCv.Pdf,
-            "docx" => FormatoDocumentoCv.Docx,
-            _ => throw new ValidationException("Elegí un formato válido: pdf o docx."),
-        };
-
-        return generadores.FirstOrDefault(g => g.Formato == buscado)
-            ?? throw new InvalidOperationException($"No hay un generador registrado para el formato {buscado}.");
     }
 
     /// <summary>Quita el archivo del CV (el CV y su texto se conservan). Devuelve null si el CV no existe.</summary>
@@ -319,10 +287,7 @@ public class CvService(
         return true;
     }
 
-    /// <summary>
-    /// Alta común de un CV: controla el límite, decide si es el principal (el primero siempre lo es)
-    /// y deja a los demás como no principales cuando corresponde.
-    /// </summary>
+    /// <summary>Alta común: controla el límite y decide si el CV es el principal (el primero siempre lo es).</summary>
     private async Task<Cv> AgregarCvAsync(
         Guid usuarioId, string titulo, string? texto, bool pideSerPrincipal, string? claveArchivo,
         CancellationToken cancellationToken)
@@ -356,9 +321,8 @@ public class CvService(
         return cv;
     }
 
-    // La clave la genera siempre el servidor (nunca el nombre que manda el cliente), así que no hay
-    // forma de escribir fuera de la carpeta de almacenamiento ni de pisar el archivo de otra persona.
-    // Se guarda en Cv.UrlArchivo: es una clave de almacenamiento, no una URL pública.
+    // La clave la genera siempre el servidor (nunca el nombre del cliente): no se puede escribir fuera de la carpeta
+    // ni pisar el archivo de otra persona. Se guarda en Cv.UrlArchivo, que es una clave de almacenamiento, no una URL.
     private static string NuevaClaveArchivo(Guid usuarioId, string extension) =>
         $"{usuarioId:N}/{Guid.NewGuid():N}{extension}";
 

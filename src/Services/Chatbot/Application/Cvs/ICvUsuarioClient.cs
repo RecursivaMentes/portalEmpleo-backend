@@ -24,16 +24,10 @@ public record ResultadoObtenerCv(CvUsuario? Cv, bool NoEncontrado = false, strin
 
 public interface ICvUsuarioClient
 {
-    /// <summary>
-    /// Lee un CV de la persona dueña del token (con su texto). Usuarios responde "no encontrado" tanto si el CV
-    /// no existe como si es de otra persona, y eso se traslada tal cual.
-    /// </summary>
+    /// <summary>Lee un CV de la persona dueña del token. "No encontrado" vale tanto si no existe como si es de otra persona.</summary>
     Task<ResultadoObtenerCv> ObtenerAsync(string accessToken, Guid cvId, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Crea un CV para la persona dueña del token. Usuarios aplica sus reglas (título, largo, límite de CV,
-    /// primer CV = principal) y, si las rechaza, devuelve su mensaje. No lanza excepciones por fallas de red.
-    /// </summary>
+    /// <summary>Crea un CV para la persona dueña del token. Usuarios aplica sus reglas y, si las rechaza, devuelve su mensaje.</summary>
     Task<ResultadoCrearCv> CrearAsync(
         string accessToken, string titulo, string textoPlano, bool esPrincipal, CancellationToken cancellationToken);
 }

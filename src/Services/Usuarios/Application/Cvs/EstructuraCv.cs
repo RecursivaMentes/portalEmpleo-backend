@@ -1,11 +1,5 @@
 namespace Application.Cvs;
 
-public enum FormatoDocumentoCv
-{
-    Pdf,
-    Docx,
-}
-
 public enum TipoBloque
 {
     /// <summary>Título principal (normalmente el nombre). Se escribe como "# Nombre".</summary>
@@ -27,18 +21,10 @@ public enum TipoBloque
 public record BloqueCv(TipoBloque Tipo, string Texto);
 
 /// <summary>
-/// Convierte el texto de un CV en bloques (títulos, secciones, viñetas, líneas) para que los generadores
-/// de PDF y Word los dibujen con formato.
-///
-/// El texto del CV es "texto plano con marcas livianas":
-///   # Nombre Apellido         → título
-///   ## Experiencia            → sección (también "###")
-///   - Algo que hice           → viñeta (también "* " o "• ")
-///   cualquier otra línea      → línea normal
-///   línea vacía               → espacio
-/// Además, una línea corta escrita toda en MAYÚSCULAS ("EXPERIENCIA LABORAL") se toma como sección:
-/// así el texto sacado de un PDF o Word subido, que no tiene marcas, sale con un formato razonable.
-/// Un texto sin ninguna marca sigue siendo perfectamente válido: sale como líneas normales.
+/// Convierte el texto de un CV en bloques para dibujarlo con formato. El texto usa marcas livianas:
+///   # Nombre → título · ## Sección → sección · - algo → viñeta · línea vacía → espacio · otra línea → texto normal.
+/// Una línea corta toda en MAYÚSCULAS ("EXPERIENCIA LABORAL") también es una sección, así el texto sacado de un
+/// archivo subido (que no trae marcas) sale con un formato razonable.
 /// </summary>
 public static class EstructuraCv
 {

@@ -101,6 +101,6 @@ Authorization: Bearer {{token}}
 POST {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/extraer-texto
 Authorization: Bearer {{token}}
 
-### Descargar el CV generado a partir de su contenido (formato=pdf por defecto, o docx)
-GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/descargar?formato=pdf
+### Descargar el CV en PDF, generado a partir de su contenido de texto
+GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/descargar
 Authorization: Bearer {{token}}
