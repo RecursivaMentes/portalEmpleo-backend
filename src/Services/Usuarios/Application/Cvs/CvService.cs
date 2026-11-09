@@ -21,7 +21,8 @@ public class CvService(
     ICvRepository cvs,
     IUsuarioRepository usuarios,
     IAlmacenamientoArchivos archivos,
-    IExtractorTextoCv extractor)
+    IExtractorTextoCv extractor,
+    IEnumerable<IGeneradorDocumentoCv> generadores)
 {
     public const int MaxCvsPorUsuario = 25;
     public const int MaxLargoTitulo = 200;
@@ -186,6 +187,50 @@ public class CvService(
             : new ArchivoDescarga(contenido, contentType, NombreDescarga(cv.Titulo, extension));
     }
 
+    /// <summary>
+    /// Genera el CV como documento descargable (RF-13) a partir de su contenido de texto.
+    /// Es distinto de <see cref="DescargarArchivoAsync"/>, que devuelve el archivo original que se subió:
+    /// este se arma de nuevo, con un formato prolijo, y refleja las ediciones hechas al texto.
+    /// Devuelve null si el CV no existe; lanza <see cref="ValidationException"/> si el formato no es válido
+    /// o el CV no tiene contenido.
+    /// </summary>
+    public async Task<ArchivoDescarga?> GenerarDocumentoAsync(
+        Guid usuarioId, Guid cvId, string? formato, CancellationToken cancellationToken = default)
+    {
+        if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
+
+        var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
+        if (cv is null) return null;
+
+        var generador = ElegirGenerador(formato);
+
+        // La misma limpieza que se aplica al texto extraído: también protege de caracteres que
+        // se hayan colado al editar el texto a mano.
+        var texto = TextoCv.Normalizar(cv.TextoPlano)
+            ?? throw new ValidationException(
+                "Este CV no tiene contenido para descargar. Escribilo o subí un archivo que tenga texto.");
+
+        var bytes = generador.Generar(EstructuraCv.Parsear(texto));
+
+        return new ArchivoDescarga(
+            new MemoryStream(bytes, writable: false),
+            generador.ContentType,
+            NombreDescarga(cv.Titulo, generador.Extension));
+    }
+
+    private IGeneradorDocumentoCv ElegirGenerador(string? formato)
+    {
+        var buscado = (string.IsNullOrWhiteSpace(formato) ? "pdf" : formato.Trim().ToLowerInvariant()) switch
+        {
+            "pdf" => FormatoDocumentoCv.Pdf,
+            "docx" => FormatoDocumentoCv.Docx,
+            _ => throw new ValidationException("Elegí un formato válido: pdf o docx."),
+        };
+
+        return generadores.FirstOrDefault(g => g.Formato == buscado)
+            ?? throw new InvalidOperationException($"No hay un generador registrado para el formato {buscado}.");
+    }
+
     /// <summary>Quita el archivo del CV (el CV y su texto se conservan). Devuelve null si el CV no existe.</summary>
     public async Task<CvResponse?> EliminarArchivoAsync(
         Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
@@ -340,7 +385,10 @@ public class CvService(
 
     private static string ValidarTitulo(string? titulo)
     {
-        var limpio = titulo?.Trim();
+        // Un título es una sola línea: se quitan también los saltos de línea y demás caracteres de control.
+        var limpio = titulo is null
+            ? null
+            : TextoCv.QuitarCaracteresInvalidos(titulo, conservarSaltosDeLinea: false).Trim();
 
         if (string.IsNullOrEmpty(limpio))
             throw new ValidationException("Ingresá un título para tu CV.");
@@ -354,6 +402,11 @@ public class CvService(
     /// <summary>Devuelve null si el texto está vacío.</summary>
     private static string? ValidarTexto(string? texto)
     {
+        if (texto is null) return null;
+
+        // Sin esto, un carácter NUL en el texto haría fallar el guardado en PostgreSQL con un error 500.
+        // Se limpia antes de mirar si quedó vacío: un texto de solo caracteres inválidos vale como vacío.
+        texto = TextoCv.QuitarCaracteresInvalidos(texto);
         if (string.IsNullOrWhiteSpace(texto)) return null;
 
         if (texto.Length > MaxLargoTexto)

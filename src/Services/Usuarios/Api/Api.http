@@ -100,3 +100,7 @@ Authorization: Bearer {{token}}
 ### Volver a leer el texto del archivo del CV y ponerlo como contenido (al subir un archivo ya se hace solo)
 POST {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/extraer-texto
 Authorization: Bearer {{token}}
+
+### Descargar el CV generado a partir de su contenido (formato=pdf por defecto, o docx)
+GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/descargar?formato=pdf
+Authorization: Bearer {{token}}

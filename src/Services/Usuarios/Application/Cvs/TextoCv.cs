@@ -76,6 +76,47 @@ public static partial class TextoCv
         return limpio;
     }
 
+    /// <summary>
+    /// Quita lo que no se puede guardar ni dibujar en ningún lado, sin tocar el resto (ni los espacios):
+    /// caracteres de control (incluido el NUL, que PostgreSQL rechaza y daría un error 500) y mitades
+    /// de emoji sueltas. Se conservan los saltos de línea y tabulaciones salvo que se pida lo contrario.
+    /// </summary>
+    public static string QuitarCaracteresInvalidos(string texto, bool conservarSaltosDeLinea = true)
+    {
+        if (!HayCaracteresInvalidos(texto, conservarSaltosDeLinea)) return texto;
+
+        var sb = new StringBuilder(texto.Length);
+        for (var i = 0; i < texto.Length; i++)
+        {
+            var c = texto[i];
+
+            if (char.IsHighSurrogate(c))
+            {
+                if (i + 1 < texto.Length && char.IsLowSurrogate(texto[i + 1]))
+                {
+                    sb.Append(c).Append(texto[i + 1]);
+                    i++;
+                }
+            }
+            else if (char.IsLowSurrogate(c)) { /* huérfano: se descarta */ }
+            else if (char.IsControl(c) && !(conservarSaltosDeLinea && c is '\n' or '\r' or '\t')) { }
+            else sb.Append(c);
+        }
+
+        return sb.ToString();
+    }
+
+    private static bool HayCaracteresInvalidos(string texto, bool conservarSaltosDeLinea)
+    {
+        foreach (var c in texto)
+        {
+            if (char.IsSurrogate(c)) return true;   // se revisa el par completo al limpiar
+            if (char.IsControl(c) && !(conservarSaltosDeLinea && c is '\n' or '\r' or '\t')) return true;
+        }
+
+        return false;
+    }
+
     [GeneratedRegex(@"[ \t]{2,}|\t")]
     private static partial Regex EspaciosRepetidos();
 

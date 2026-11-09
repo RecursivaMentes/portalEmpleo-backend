@@ -148,6 +148,30 @@ public class CvsController(CvService cvs) : ControllerBase
     }
 
     /// <summary>
+    /// Descarga el CV generado a partir de su contenido, en PDF (por defecto) o Word:
+    /// GET api/cvs/{id}/descargar?formato=pdf|docx.
+    /// </summary>
+    [HttpGet("{cvId:guid}/descargar")]
+    public async Task<IActionResult> Descargar(
+        Guid cvId, [FromQuery] string? formato, CancellationToken cancellationToken)
+    {
+        if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
+
+        try
+        {
+            var documento = await cvs.GenerarDocumentoAsync(usuarioId, cvId, formato, cancellationToken);
+            if (documento is null) return CvNoEncontrado();
+
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            return File(documento.Contenido, documento.ContentType, documento.NombreSugerido);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Vuelve a leer el texto del archivo guardado y lo pone como contenido del CV.
     /// (Al subir un archivo esto ya se hace solo; este endpoint sirve para repetirlo a pedido.)
     /// </summary>
