@@ -55,3 +55,32 @@ Content-Type: application/json
   "puestoObjetivo": "Backend Developer",
   "esPrincipal": false
 }
+
+### 7. Analizar un CV con IA y proponer datos para el perfil (RF-09). NO guarda nada. El CV debe tener texto.
+POST {{Chatbot_HostAddress}}/api/analisis-cv
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cvId": "{{cvId}}"
+}
+
+### 8. Aplicar al perfil lo que la persona confirmo de la propuesta (solo agrega, nunca borra).
+### iniciarChat=true deja un chat abierto con las preguntas por los datos que faltan (RF-10).
+POST {{Chatbot_HostAddress}}/api/analisis-cv/aplicar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "resumen": null,
+  "telefono": null,
+  "experiencias": [
+    { "empresa": "Acme SA", "puesto": "Desarrolladora .NET", "ubicacion": "Buenos Aires",
+      "descripcion": "Desarrollo de APIs REST.", "fechaInicio": "2020-03-01", "fechaFin": "2022-06-30", "esActual": false }
+  ],
+  "formacion": [],
+  "habilidades": [ { "nombre": "C#", "nivel": null } ],
+  "idiomas": [],
+  "incompletos": [],
+  "iniciarChat": true
+}

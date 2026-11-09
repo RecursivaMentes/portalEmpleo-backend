@@ -12,6 +12,38 @@ public class CvUsuarioClient(HttpClient http, ILogger<CvUsuarioClient> logger) :
 {
     private static readonly JsonSerializerOptions OpcionesJson = new(JsonSerializerDefaults.Web);
 
+    public async Task<ResultadoObtenerCv> ObtenerAsync(
+        string accessToken, Guid cvId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"api/cvs/{cvId}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            using var response = await http.SendAsync(request, cancellationToken);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return new ResultadoObtenerCv(null, NoEncontrado: true, Mensaje: "No encontramos ese CV.");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Usuarios respondió {Status} en GET api/cvs/{{id}}.", (int)response.StatusCode);
+                return new ResultadoObtenerCv(null, Mensaje: await LectorErroresUsuarios.LeerMensajeAsync(response, cancellationToken));
+            }
+
+            var cv = await response.Content.ReadFromJsonAsync<CvUsuario>(OpcionesJson, cancellationToken);
+            return cv is null
+                ? new ResultadoObtenerCv(null, Mensaje: "El servicio de perfiles devolvió una respuesta vacía.")
+                : new ResultadoObtenerCv(cv);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "No se pudo leer el CV en el servicio Usuarios.");
+            return new ResultadoObtenerCv(null, Mensaje: "No se pudo comunicar con el servicio de perfiles.");
+        }
+    }
+
     public async Task<ResultadoCrearCv> CrearAsync(
         string accessToken, string titulo, string textoPlano, bool esPrincipal, CancellationToken cancellationToken)
     {
@@ -29,7 +61,7 @@ public class CvUsuarioClient(HttpClient http, ILogger<CvUsuarioClient> logger) :
 
             if (response.IsSuccessStatusCode)
             {
-                var cv = await response.Content.ReadFromJsonAsync<CvCreado>(OpcionesJson, cancellationToken);
+                var cv = await response.Content.ReadFromJsonAsync<CvUsuario>(OpcionesJson, cancellationToken);
                 return cv is null
                     ? new ResultadoCrearCv(null, "El servicio de perfiles devolvió una respuesta vacía.")
                     : new ResultadoCrearCv(cv);

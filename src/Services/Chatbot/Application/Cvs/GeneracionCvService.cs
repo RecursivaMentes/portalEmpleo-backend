@@ -30,7 +30,7 @@ public enum MotivoErrorGeneracion
 /// El CV redactado, cuando se generó bien pero no se pudo guardar: así no se pierde el trabajo (y el costo) de la IA.
 /// </param>
 public record ResultadoGeneracion(
-    CvCreado? Cv,
+    CvUsuario? Cv,
     MotivoErrorGeneracion? Motivo = null,
     string? Mensaje = null,
     IReadOnlyList<string>? Problemas = null,
@@ -40,12 +40,15 @@ public record ResultadoGeneracion(
 }
 
 /// <summary>
-/// Registro de personas que tienen una generación de CV en curso. Evita que un doble clic (o un cliente que
-/// reintenta) dispare dos generaciones a la vez: costarían el doble y dejarían dos CV iguales.
+/// Registro de personas que tienen una operación con IA sobre su CV o su perfil en curso (generar un CV, analizar
+/// uno, aplicar una propuesta). Evita que un doble clic (o un cliente que reintenta) dispare dos a la vez: costarían
+/// el doble, dejarían CV repetidos y, al escribir el perfil (que se reemplaza entero), una operación pisaría a la otra.
 /// Es memoria de un solo proceso; si el servicio corriera en varias instancias habría que usar algo compartido.
 /// </summary>
 public class GeneracionesEnCurso
 {
+    public const string MensajeYaEnCurso = "Ya estamos procesando otra solicitud tuya. Esperá unos segundos.";
+
     private readonly ConcurrentDictionary<Guid, byte> _enCurso = new();
 
     public bool TryEntrar(Guid usuarioId) => _enCurso.TryAdd(usuarioId, 0);
@@ -73,7 +76,7 @@ public partial class GeneracionCvService(
         Guid usuarioId, string accessToken, GenerarCvRequest request, CancellationToken cancellationToken)
     {
         if (!enCurso.TryEntrar(usuarioId))
-            return Error(MotivoErrorGeneracion.YaEnCurso, "Ya estamos generando tu CV. Esperá unos segundos.");
+            return Error(MotivoErrorGeneracion.YaEnCurso, GeneracionesEnCurso.MensajeYaEnCurso);
 
         try
         {

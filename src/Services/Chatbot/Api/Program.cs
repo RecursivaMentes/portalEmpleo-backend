@@ -1,6 +1,7 @@
 using Application.Chats;
 using Application.Cvs;
 using Chatbot.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
@@ -15,9 +16,33 @@ builder.Services.AddControllers()
 // Configuración nativa de .NET 10 para documentación de APIs
 builder.Services.AddOpenApi();
 
+// Solo para la importación de datos desde un CV: si el pedido no tiene la forma esperada (por ejemplo, una
+// experiencia sin empresa), se responde { message } en español, como el resto de los errores del servicio,
+// en vez del ProblemDetails en inglés del framework. El detalle técnico va en "errores".
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    var porDefecto = options.InvalidModelStateResponseFactory;
+    options.InvalidModelStateResponseFactory = contexto =>
+    {
+        if (!contexto.HttpContext.Request.Path.StartsWithSegments("/api/analisis-cv"))
+            return porDefecto(contexto);
+
+        return new BadRequestObjectResult(new
+        {
+            message = "Los datos enviados no son válidos. Revisá que cada experiencia tenga empresa y puesto, " +
+                      "cada formación su institución y cada habilidad e idioma su nombre.",
+            errores = contexto.ModelState
+                .Where(e => e.Value is { Errors.Count: > 0 })
+                .ToDictionary(e => e.Key, e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray()),
+        });
+    };
+});
+
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<GeneracionCvService>();
+builder.Services.AddScoped<AnalisisCvService>();
+builder.Services.AddScoped<AplicacionPropuestaService>();
 builder.Services.AddSingleton<GeneracionesEnCurso>();
 
 builder.Services.AddCors(options =>

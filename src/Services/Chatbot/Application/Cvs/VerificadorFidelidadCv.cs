@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 using Application.Perfil;
 
@@ -22,17 +20,17 @@ public static partial class VerificadorFidelidadCv
     public static IReadOnlyList<string> Verificar(string cv, PerfilUsuario perfil, string datos)
     {
         var problemas = new List<string>();
-        var cvNormalizado = Normalizar(cv);
+        var cvNormalizado = TextoComparable.Normalizar(cv);
 
         foreach (var empresa in Distintos(perfil.Laboral?.Experiencias.Select(e => e.Empresa)))
         {
-            if (!cvNormalizado.Contains(Normalizar(empresa), StringComparison.Ordinal))
+            if (!cvNormalizado.Contains(TextoComparable.Normalizar(empresa), StringComparison.Ordinal))
                 problemas.Add($"Falta la empresa \"{empresa}\" (tiene que figurar escrita exactamente así).");
         }
 
         foreach (var institucion in Distintos(perfil.Laboral?.Formacion.Select(f => f.Institucion)))
         {
-            if (!cvNormalizado.Contains(Normalizar(institucion), StringComparison.Ordinal))
+            if (!cvNormalizado.Contains(TextoComparable.Normalizar(institucion), StringComparison.Ordinal))
                 problemas.Add($"Falta la institución \"{institucion}\" (tiene que figurar escrita exactamente así).");
         }
 
@@ -61,31 +59,6 @@ public static partial class VerificadorFidelidadCv
 
     private static HashSet<string> Anios(string texto) =>
         AnioDe4Digitos().Matches(texto).Select(m => m.Value).ToHashSet();
-
-    // Sin mayúsculas, sin tildes y con los espacios unificados: se compara el contenido, no la tipografía.
-    private static string Normalizar(string texto)
-    {
-        var sb = new StringBuilder(texto.Length);
-        var ultimoFueEspacio = false;
-
-        foreach (var c in texto.Normalize(NormalizationForm.FormD))
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark) continue;
-
-            if (char.IsWhiteSpace(c))
-            {
-                if (!ultimoFueEspacio) sb.Append(' ');
-                ultimoFueEspacio = true;
-            }
-            else
-            {
-                sb.Append(char.ToLowerInvariant(c));
-                ultimoFueEspacio = false;
-            }
-        }
-
-        return sb.ToString().Trim();
-    }
 
     [GeneratedRegex(@"\b(?:19|20)\d{2}\b")]
     private static partial Regex AnioDe4Digitos();

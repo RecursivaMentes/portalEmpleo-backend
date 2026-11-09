@@ -111,8 +111,9 @@ public class ClaudeAsistente(AnthropicOptions options, ILogger<ClaudeAsistente> 
     }
 
     public async Task<string> GenerarTextoAsync(
-        string instrucciones, string solicitud, CancellationToken cancellationToken)
+        string instrucciones, string solicitud, CancellationToken cancellationToken, bool respuestaJson = false)
     {
+        // Claude no necesita un modo especial: cumple la instrucción de responder solo JSON.
         var cliente = ObtenerCliente();
 
         var mensajes = new List<MessageParam> { new() { Role = Role.User, Content = solicitud } };

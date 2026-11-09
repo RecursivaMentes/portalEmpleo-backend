@@ -35,5 +35,10 @@ public interface IAsistenteIA
     /// </summary>
     /// <exception cref="AsistenteNoDisponibleException">Si el modelo no está disponible o no responde.</exception>
     /// <returns>El texto del modelo; cadena vacía si no devolvió nada utilizable (por ejemplo, si se negó).</returns>
-    Task<string> GenerarTextoAsync(string instrucciones, string solicitud, CancellationToken cancellationToken);
+    /// <param name="respuestaJson">
+    /// Si es true, se le pide al modelo que responda únicamente un objeto JSON (los modelos locales tienen un modo
+    /// específico para eso, que evita que mezclen texto con el JSON). Las instrucciones deben pedir igualmente JSON.
+    /// </param>
+    Task<string> GenerarTextoAsync(
+        string instrucciones, string solicitud, CancellationToken cancellationToken, bool respuestaJson = false);
 }
