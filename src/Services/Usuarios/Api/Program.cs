@@ -1,4 +1,5 @@
 using Application.Auth;
+using Application.Cvs;
 using Application.PerfilLaboral;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
@@ -123,6 +124,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PerfilLaboralService>();
+builder.Services.AddScoped<CvService>();
 
 var issuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException("Falta Jwt:Issuer");
