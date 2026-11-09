@@ -96,3 +96,7 @@ Authorization: Bearer {{token}}
 ### Quitar el archivo de un CV (el CV y su texto se conservan)
 DELETE {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/archivo
 Authorization: Bearer {{token}}
+
+### Volver a leer el texto del archivo del CV y ponerlo como contenido (al subir un archivo ya se hace solo)
+POST {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/extraer-texto
+Authorization: Bearer {{token}}

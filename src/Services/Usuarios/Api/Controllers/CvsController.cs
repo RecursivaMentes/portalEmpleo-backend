@@ -147,6 +147,26 @@ public class CvsController(CvService cvs) : ControllerBase
         return File(archivo.Contenido, archivo.ContentType, archivo.NombreSugerido);
     }
 
+    /// <summary>
+    /// Vuelve a leer el texto del archivo guardado y lo pone como contenido del CV.
+    /// (Al subir un archivo esto ya se hace solo; este endpoint sirve para repetirlo a pedido.)
+    /// </summary>
+    [HttpPost("{cvId:guid}/extraer-texto")]
+    public async Task<IActionResult> ExtraerTexto(Guid cvId, CancellationToken cancellationToken)
+    {
+        if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
+
+        try
+        {
+            var cv = await cvs.ExtraerTextoAsync(usuarioId, cvId, cancellationToken);
+            return cv is null ? CvNoEncontrado() : Ok(cv);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     /// <summary>Quita el archivo del CV; el CV y su texto se conservan.</summary>
     [HttpDelete("{cvId:guid}/archivo")]
     public async Task<IActionResult> EliminarArchivo(Guid cvId, CancellationToken cancellationToken)

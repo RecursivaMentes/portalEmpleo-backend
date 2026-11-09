@@ -15,8 +15,13 @@ namespace Application.Cvs;
 /// - Un CV puede tener un archivo (PDF o .docx) guardado en <see cref="IAlmacenamientoArchivos"/>.
 ///   El archivo se escribe antes que la base y se borra después de ella, para no dejar nunca
 ///   un CV apuntando a un archivo que no existe (lo peor que puede pasar es un archivo huérfano).
+/// - Al subir un archivo se extrae su texto y se guarda como contenido del CV (<see cref="IExtractorTextoCv"/>).
 /// </summary>
-public class CvService(ICvRepository cvs, IUsuarioRepository usuarios, IAlmacenamientoArchivos archivos)
+public class CvService(
+    ICvRepository cvs,
+    IUsuarioRepository usuarios,
+    IAlmacenamientoArchivos archivos,
+    IExtractorTextoCv extractor)
 {
     public const int MaxCvsPorUsuario = 25;
     public const int MaxLargoTitulo = 200;
@@ -66,12 +71,15 @@ public class CvService(ICvRepository cvs, IUsuarioRepository usuarios, IAlmacena
             string.IsNullOrWhiteSpace(titulo) ? ArchivosCv.TituloDesdeNombre(archivo.NombreArchivo) : titulo);
         var validado = await ArchivosCv.LeerYValidarAsync(archivo, cancellationToken);
 
+        // Si el archivo no tiene texto legible (p. ej. un PDF escaneado), el CV se crea igual, sin texto.
+        var texto = TextoCv.Normalizar(extractor.Extraer(validado.Bytes, validado.Extension));
+
         var clave = NuevaClaveArchivo(usuarioId, validado.Extension);
         await GuardarArchivoAsync(clave, validado, cancellationToken);
 
         try
         {
-            var cv = await AgregarCvAsync(usuarioId, tituloFinal, null, esPrincipal, clave, cancellationToken);
+            var cv = await AgregarCvAsync(usuarioId, tituloFinal, texto, esPrincipal, clave, cancellationToken);
             return ToResponse(cv);
         }
         catch
@@ -97,10 +105,15 @@ public class CvService(ICvRepository cvs, IUsuarioRepository usuarios, IAlmacena
         var claveNueva = NuevaClaveArchivo(usuarioId, validado.Extension);
         await GuardarArchivoAsync(claveNueva, validado, cancellationToken);
 
+        // El texto pasa a ser el del archivo nuevo. Si el archivo nuevo no tiene texto legible,
+        // se conserva el que había: es mejor que dejar el CV vacío.
+        var texto = TextoCv.Normalizar(extractor.Extraer(validado.Bytes, validado.Extension));
+
         var claveAnterior = cv.UrlArchivo;
         try
         {
             cv.UrlArchivo = claveNueva;
+            if (texto is not null) cv.TextoPlano = texto;
             cv.FechaActualizacion = DateTime.UtcNow;
             await cvs.GuardarCambiosAsync(cancellationToken);
         }
@@ -112,6 +125,44 @@ public class CvService(ICvRepository cvs, IUsuarioRepository usuarios, IAlmacena
 
         if (!string.IsNullOrWhiteSpace(claveAnterior))
             await archivos.EliminarAsync(claveAnterior, CancellationToken.None);
+
+        return ToResponse(cv);
+    }
+
+    /// <summary>
+    /// Vuelve a leer el texto del archivo guardado y lo pone como contenido del CV (RF-09, primera parte).
+    /// Sirve cuando el texto se borró o se editó y se quiere recuperar el original del archivo.
+    /// Devuelve null si el CV no existe; lanza <see cref="ValidationException"/> si no hay archivo
+    /// o no se pudo sacar texto de él.
+    /// </summary>
+    public async Task<CvResponse?> ExtraerTextoAsync(
+        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
+    {
+        if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
+
+        var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
+        if (cv is null) return null;
+
+        if (string.IsNullOrWhiteSpace(cv.UrlArchivo))
+            throw new ValidationException(
+                "Este CV no tiene un archivo. Subí un PDF o un Word para poder leer su texto.");
+
+        var extension = Path.GetExtension(cv.UrlArchivo);
+
+        await using var contenido = await archivos.AbrirAsync(cv.UrlArchivo, cancellationToken)
+            ?? throw new ValidationException("El archivo de este CV ya no está disponible. Volvé a subirlo.");
+
+        var validado = await ArchivosCv.LeerYValidarAsync(
+            new ArchivoSubido("cv" + extension, contenido), cancellationToken);
+
+        var texto = TextoCv.Normalizar(extractor.Extraer(validado.Bytes, validado.Extension))
+            ?? throw new ValidationException(
+                "No pudimos leer texto de este archivo. Si es un PDF escaneado (una imagen), " +
+                "no se puede extraer el texto: escribilo a mano o subí una versión con texto seleccionable.");
+
+        cv.TextoPlano = texto;
+        cv.FechaActualizacion = DateTime.UtcNow;
+        await cvs.GuardarCambiosAsync(cancellationToken);
 
         return ToResponse(cv);
     }
