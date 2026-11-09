@@ -79,6 +79,87 @@ public class CvsController(CvService cvs) : ControllerBase
             : CvNoEncontrado();
     }
 
+    // ---- Archivo del CV (RF-08) ----------------------------------------------------------------
+    // El límite de la petición es un poco mayor al del archivo (el resto es el "sobre" multipart).
+    // Si alguien manda algo mucho más grande, se corta antes de leerlo entero.
+
+    /// <summary>Crea un CV a partir de un archivo (multipart/form-data: archivo, titulo?, esPrincipal?).</summary>
+    [HttpPost("archivo")]
+    [RequestSizeLimit(ArchivosCv.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> CrearDesdeArchivo(
+        IFormFile? archivo, [FromForm] string? titulo, [FromForm] bool esPrincipal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
+        if (archivo is null) return ArchivoFaltante();
+
+        try
+        {
+            await using var contenido = archivo.OpenReadStream();
+            var cv = await cvs.CrearDesdeArchivoAsync(
+                usuarioId, new ArchivoSubido(archivo.FileName, contenido), titulo, esPrincipal, cancellationToken);
+
+            return cv is null
+                ? SesionInvalida()
+                : CreatedAtAction(nameof(Obtener), new { cvId = cv.Id }, cv);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Asocia un archivo a un CV existente; si ya tenía uno, lo reemplaza.</summary>
+    [HttpPut("{cvId:guid}/archivo")]
+    [RequestSizeLimit(ArchivosCv.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> ReemplazarArchivo(
+        Guid cvId, IFormFile? archivo, CancellationToken cancellationToken)
+    {
+        if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
+        if (archivo is null) return ArchivoFaltante();
+
+        try
+        {
+            await using var contenido = archivo.OpenReadStream();
+            var cv = await cvs.ReemplazarArchivoAsync(
+                usuarioId, cvId, new ArchivoSubido(archivo.FileName, contenido), cancellationToken);
+
+            return cv is null ? CvNoEncontrado() : Ok(cv);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Descarga el archivo original que se subió para el CV.</summary>
+    [HttpGet("{cvId:guid}/archivo")]
+    public async Task<IActionResult> DescargarArchivo(Guid cvId, CancellationToken cancellationToken)
+    {
+        if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
+
+        var archivo = await cvs.DescargarArchivoAsync(usuarioId, cvId, cancellationToken);
+        if (archivo is null)
+            return NotFound(new { message = "No encontramos un archivo para ese CV." });
+
+        // El navegador no debe "adivinar" otro tipo de contenido distinto al declarado.
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(archivo.Contenido, archivo.ContentType, archivo.NombreSugerido);
+    }
+
+    /// <summary>Quita el archivo del CV; el CV y su texto se conservan.</summary>
+    [HttpDelete("{cvId:guid}/archivo")]
+    public async Task<IActionResult> EliminarArchivo(Guid cvId, CancellationToken cancellationToken)
+    {
+        if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
+
+        var cv = await cvs.EliminarArchivoAsync(usuarioId, cvId, cancellationToken);
+        return cv is null ? CvNoEncontrado() : Ok(cv);
+    }
+
+    private IActionResult ArchivoFaltante() =>
+        BadRequest(new { message = "Adjuntá un archivo en el campo \"archivo\"." });
+
     private bool TryGetUsuarioId(out Guid usuarioId) =>
         Guid.TryParse(User.FindFirst("sub")?.Value, out usuarioId);
 

@@ -60,3 +60,39 @@ Authorization: Bearer {{token}}
 ### Validar que un CV es mio (lo usa el servicio de postulaciones): 204 si lo es, 404 si no
 GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/validacion
 Authorization: Bearer {{token}}
+
+### Crear un CV subiendo un archivo (PDF o Word .docx, hasta 5 MB). titulo y esPrincipal son opcionales
+POST {{Usuarios_HostAddress}}/api/cvs/archivo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="titulo"
+
+Mi CV subido
+--limite
+Content-Disposition: form-data; name="archivo"; filename="cv.pdf"
+Content-Type: application/pdf
+
+< ./cv.pdf
+--limite--
+
+### Reemplazar (o agregar) el archivo de un CV que ya existe
+PUT {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/archivo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="archivo"; filename="cv.docx"
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+
+< ./cv.docx
+--limite--
+
+### Descargar el archivo original del CV
+GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/archivo
+Authorization: Bearer {{token}}
+
+### Quitar el archivo de un CV (el CV y su texto se conservan)
+DELETE {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/archivo
+Authorization: Bearer {{token}}
