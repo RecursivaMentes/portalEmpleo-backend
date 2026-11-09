@@ -110,12 +110,30 @@ public class ClaudeAsistente(AnthropicOptions options, ILogger<ClaudeAsistente> 
         }
     }
 
+    public async Task<string> GenerarTextoAsync(
+        string instrucciones, string solicitud, CancellationToken cancellationToken)
+    {
+        var cliente = ObtenerCliente();
+
+        var mensajes = new List<MessageParam> { new() { Role = Role.User, Content = solicitud } };
+
+        // Redactar con reglas estrictas (no inventar nada) se beneficia de más cuidado que una charla corta.
+        var respuesta = await CrearMensajeAsync(
+            cliente, instrucciones, mensajes, tools: null, cancellationToken, Effort.Medium);
+
+        if (respuesta.StopReason == "refusal") return string.Empty;
+
+        return string.Concat(
+            respuesta.Content.Select(b => b.Value).OfType<TextBlock>().Select(t => t.Text)).Trim();
+    }
+
     private async Task<Message> CrearMensajeAsync(
         AnthropicClient cliente,
         string sistema,
         List<MessageParam> mensajes,
         List<ToolUnion>? tools,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Effort? esfuerzo = null)
     {
         try
         {
@@ -124,8 +142,8 @@ public class ClaudeAsistente(AnthropicOptions options, ILogger<ClaudeAsistente> 
                 Model = options.Model,
                 MaxTokens = options.MaxTokens,
                 System = sistema,
-                // Conversación corta: esfuerzo bajo para responder rápido y gastar menos.
-                OutputConfig = new OutputConfig { Effort = Effort.Low },
+                // Por defecto, esfuerzo bajo (conversación corta): responde rápido y gasta menos.
+                OutputConfig = new OutputConfig { Effort = esfuerzo ?? Effort.Low },
                 Messages = mensajes,
                 Tools = tools,
             }, cancellationToken);

@@ -28,4 +28,12 @@ public interface IAsistenteIA
         string? contextoPerfil,
         IEjecutorHerramientas? herramientas,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Pide un texto al modelo en una sola vuelta: unas instrucciones y una solicitud, sin conversación,
+    /// sin herramientas y sin el contexto del chat. Sirve para tareas de redacción como armar un CV.
+    /// </summary>
+    /// <exception cref="AsistenteNoDisponibleException">Si el modelo no está disponible o no responde.</exception>
+    /// <returns>El texto del modelo; cadena vacía si no devolvió nada utilizable (por ejemplo, si se negó).</returns>
+    Task<string> GenerarTextoAsync(string instrucciones, string solicitud, CancellationToken cancellationToken);
 }

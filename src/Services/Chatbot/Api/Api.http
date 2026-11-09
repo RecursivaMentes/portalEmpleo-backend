@@ -43,3 +43,15 @@ Content-Type: application/json
 ### 5. Ver el historial del chat
 GET {{Chatbot_HostAddress}}/api/chats/{{chatId}}/mensajes
 Authorization: Bearer {{token}}
+
+### 6. Generar un CV con IA a partir de tu perfil laboral (RF-11). Puede tardar (con un modelo local, 1 minuto o mas).
+### Todos los campos son opcionales. Responde 201 con el CV creado; despues se ve, edita y descarga en el servicio Usuarios (api/cvs).
+POST {{Chatbot_HostAddress}}/api/generacion-cv
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "CV orientado a backend",
+  "puestoObjetivo": "Backend Developer",
+  "esPrincipal": false
+}

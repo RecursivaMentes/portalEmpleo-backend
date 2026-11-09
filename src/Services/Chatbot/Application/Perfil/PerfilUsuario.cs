@@ -2,13 +2,17 @@ namespace Application.Perfil;
 
 /// <summary>
 /// Vista de solo lectura del perfil de una persona, tal como lo expone el servicio Usuarios.
-/// No incluye email ni teléfono: el asistente no los necesita para conversar.
+/// Apellido, email y teléfono se usan para armar el CV; el contexto del chat (<see cref="ContextoPerfil"/>)
+/// no los incluye, porque el asistente no los necesita para conversar.
 /// </summary>
 public record PerfilUsuario(
     string Nombre,
     string PreferenciasJson,
     string? ReglasPostulacion,
-    PerfilLaboralUsuario? Laboral);
+    PerfilLaboralUsuario? Laboral,
+    string Apellido = "",
+    string? Email = null,
+    string? Telefono = null);
 
 public record PerfilLaboralUsuario(
     string? Resumen,

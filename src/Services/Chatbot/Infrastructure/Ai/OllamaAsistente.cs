@@ -81,13 +81,28 @@ public class OllamaAsistente(HttpClient http, OllamaOptions options, ILogger<Oll
         }
     }
 
+    public async Task<string> GenerarTextoAsync(
+        string instrucciones, string solicitud, CancellationToken cancellationToken)
+    {
+        List<OllamaMensaje> mensajes = [new("system", instrucciones), new("user", solicitud)];
+
+        // Temperatura baja: para redactar a partir de datos conviene que el modelo se ciña a ellos y no "invente".
+        // Contexto de 8192 tokens: el valor por defecto de Ollama es chico y recortaría un perfil largo en silencio.
+        var respuesta = await EnviarAsync(
+            mensajes, tools: null, cancellationToken, new OllamaOpcionesModelo(Temperature: 0.2, NumCtx: 8192));
+
+        return respuesta?.Content?.Trim() ?? string.Empty;
+    }
+
     private async Task<OllamaMensaje?> EnviarAsync(
-        List<OllamaMensaje> mensajes, List<OllamaHerramienta>? tools, CancellationToken cancellationToken)
+        List<OllamaMensaje> mensajes, List<OllamaHerramienta>? tools, CancellationToken cancellationToken,
+        OllamaOpcionesModelo? opcionesModelo = null)
     {
         try
         {
             // Se serializa a mano para que la petición lleve Content-Length y no use "chunked".
-            var cuerpo = JsonSerializer.Serialize(new OllamaPeticion(options.Model, mensajes, Stream: false, tools));
+            var cuerpo = JsonSerializer.Serialize(
+                new OllamaPeticion(options.Model, mensajes, Stream: false, tools, opcionesModelo));
             using var contenido = new StringContent(cuerpo, Encoding.UTF8, "application/json");
 
             using var httpResponse = await http.PostAsync("api/chat", contenido, cancellationToken);
@@ -182,7 +197,13 @@ public class OllamaAsistente(HttpClient http, OllamaOptions options, ILogger<Oll
         [property: JsonPropertyName("messages")] List<OllamaMensaje> Messages,
         [property: JsonPropertyName("stream")] bool Stream,
         [property: JsonPropertyName("tools"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        List<OllamaHerramienta>? Tools);
+        List<OllamaHerramienta>? Tools,
+        [property: JsonPropertyName("options"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        OllamaOpcionesModelo? Options = null);
+
+    private record OllamaOpcionesModelo(
+        [property: JsonPropertyName("temperature")] double Temperature,
+        [property: JsonPropertyName("num_ctx")] int NumCtx);
 
     private record OllamaRespuesta(
         [property: JsonPropertyName("message")] OllamaMensaje? Message);

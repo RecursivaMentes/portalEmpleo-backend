@@ -1,4 +1,5 @@
 using Application.Chats;
+using Application.Cvs;
 using Chatbot.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -16,6 +17,8 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ChatService>();
+builder.Services.AddScoped<GeneracionCvService>();
+builder.Services.AddSingleton<GeneracionesEnCurso>();
 
 builder.Services.AddCors(options =>
 {
