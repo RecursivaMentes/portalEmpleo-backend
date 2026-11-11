@@ -49,6 +49,9 @@ public class CvsController(CvService cvs) : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }        catch (CvConflictoException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 
@@ -58,6 +61,8 @@ public class CvsController(CvService cvs) : ControllerBase
     {
         if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
 
+        if (request.Version < 1) return BadRequest(new { message = "Envia la version del CV que consultaste." });
+
         try
         {
             var cv = await cvs.ActualizarAsync(usuarioId, cvId, request, cancellationToken);
@@ -66,6 +71,9 @@ public class CvsController(CvService cvs) : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }        catch (CvConflictoException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 
@@ -73,10 +81,16 @@ public class CvsController(CvService cvs) : ControllerBase
     public async Task<IActionResult> Eliminar(Guid cvId, CancellationToken cancellationToken)
     {
         if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
-
-        return await cvs.EliminarAsync(usuarioId, cvId, cancellationToken)
-            ? NoContent()
-            : CvNoEncontrado();
+        if (!TryVersion(out var version)) return VersionFaltante();
+        try
+        {
+            return await cvs.EliminarAsync(usuarioId, cvId, version, cancellationToken)
+                ? NoContent() : CvNoEncontrado();
+        }
+        catch (CvConflictoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     // ---- Archivo del CV (RF-08) ----------------------------------------------------------------
@@ -106,6 +120,9 @@ public class CvsController(CvService cvs) : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }        catch (CvConflictoException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 
@@ -117,18 +134,22 @@ public class CvsController(CvService cvs) : ControllerBase
     {
         if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
         if (archivo is null) return ArchivoFaltante();
+        if (!TryVersion(out var version)) return VersionFaltante();
 
         try
         {
             await using var contenido = archivo.OpenReadStream();
             var cv = await cvs.ReemplazarArchivoAsync(
-                usuarioId, cvId, new ArchivoSubido(archivo.FileName, contenido), cancellationToken);
+                usuarioId, cvId, new ArchivoSubido(archivo.FileName, contenido), version, cancellationToken);
 
             return cv is null ? CvNoEncontrado() : Ok(cv);
         }
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }        catch (CvConflictoException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 
@@ -178,14 +199,19 @@ public class CvsController(CvService cvs) : ControllerBase
     {
         if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
 
+        if (!TryVersion(out var version)) return VersionFaltante();
+
         try
         {
-            var cv = await cvs.ExtraerTextoAsync(usuarioId, cvId, cancellationToken);
+            var cv = await cvs.ExtraerTextoAsync(usuarioId, cvId, version, cancellationToken);
             return cv is null ? CvNoEncontrado() : Ok(cv);
         }
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }        catch (CvConflictoException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 
@@ -194,10 +220,26 @@ public class CvsController(CvService cvs) : ControllerBase
     public async Task<IActionResult> EliminarArchivo(Guid cvId, CancellationToken cancellationToken)
     {
         if (!TryGetUsuarioId(out var usuarioId)) return SesionInvalida();
-
-        var cv = await cvs.EliminarArchivoAsync(usuarioId, cvId, cancellationToken);
-        return cv is null ? CvNoEncontrado() : Ok(cv);
+        if (!TryVersion(out var version)) return VersionFaltante();
+        try
+        {
+            var cv = await cvs.EliminarArchivoAsync(usuarioId, cvId, version, cancellationToken);
+            return cv is null ? CvNoEncontrado() : Ok(cv);
+        }
+        catch (CvConflictoException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
+
+    private bool TryVersion(out long version)
+    {
+        var valor = Request.Headers.IfMatch.ToString().Trim();
+        return long.TryParse(valor.Trim('"'), out version) && version > 0;
+    }
+
+    private IActionResult VersionFaltante() =>
+        BadRequest(new { message = "Envia la version consultada en If-Match, por ejemplo: \"3\"." });
 
     private IActionResult ArchivoFaltante() =>
         BadRequest(new { message = "Adjuntá un archivo en el campo \"archivo\"." });

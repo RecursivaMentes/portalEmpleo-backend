@@ -7,4 +7,5 @@ public record CvResumenResponse(
     bool EsPrincipal,
     bool TieneArchivo,
     DateTime FechaCreacion,
-    DateTime FechaActualizacion);
+    DateTime FechaActualizacion,
+    long Version);

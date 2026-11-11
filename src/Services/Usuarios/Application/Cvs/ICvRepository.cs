@@ -2,6 +2,8 @@ using Domain.Entities;
 
 namespace Application.Cvs;
 
+public sealed class CvConflictoException(string mensaje) : Exception(mensaje);
+
 public interface ICvRepository
 {
     Task<bool> PerteneceAUsuarioAsync(Guid cvId, Guid usuarioId, CancellationToken cancellationToken = default);
@@ -16,6 +18,9 @@ public interface ICvRepository
     Task<Cv?> ObtenerAsync(Guid cvId, Guid usuarioId, CancellationToken cancellationToken = default);
 
     Task AgregarAsync(Cv cv, CancellationToken cancellationToken = default);
+
+    /// <summary>Ejecuta una operacion de CV con bloqueo por usuario sin espera (PostgreSQL NOWAIT).</summary>
+    Task<T> EjecutarExclusivoAsync<T>(Guid usuarioId, Func<Task<T>> accion, CancellationToken cancellationToken = default);
 
     void Eliminar(Cv cv);
 

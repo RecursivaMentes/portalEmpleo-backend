@@ -85,12 +85,13 @@ public class CvService(
 
     /// <summary>Asocia un archivo a un CV existente. Si ya tenía uno, lo reemplaza.</summary>
     public async Task<CvResponse?> ReemplazarArchivoAsync(
-        Guid usuarioId, Guid cvId, ArchivoSubido archivo, CancellationToken cancellationToken = default)
+        Guid usuarioId, Guid cvId, ArchivoSubido archivo, long version, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
 
         var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
         if (cv is null) return null;
+        ComprobarVersion(cv, version);
 
         var validado = await ArchivosCv.LeerYValidarAsync(archivo, cancellationToken);
 
@@ -127,12 +128,13 @@ public class CvService(
     /// lanza <see cref="ValidationException"/> si no hay archivo o no se pudo sacar texto de él.
     /// </summary>
     public async Task<CvResponse?> ExtraerTextoAsync(
-        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
+        Guid usuarioId, Guid cvId, long version, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
 
         var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
         if (cv is null) return null;
+        ComprobarVersion(cv, version);
 
         if (string.IsNullOrWhiteSpace(cv.UrlArchivo))
             throw new ValidationException(
@@ -201,12 +203,13 @@ public class CvService(
 
     /// <summary>Quita el archivo del CV (el CV y su texto se conservan). Devuelve null si el CV no existe.</summary>
     public async Task<CvResponse?> EliminarArchivoAsync(
-        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
+        Guid usuarioId, Guid cvId, long version, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
 
         var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
         if (cv is null) return null;
+        ComprobarVersion(cv, version);
 
         var clave = cv.UrlArchivo;
         if (string.IsNullOrWhiteSpace(clave)) return ToResponse(cv);
@@ -223,15 +226,27 @@ public class CvService(
         Guid usuarioId, Guid cvId, ActualizarCvRequest request, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
+        if (request.Version < 1)
+            throw new ValidationException("Envia la version del CV que consultaste.");
 
+        if (request.EsPrincipal is true)
+            return await cvs.EjecutarExclusivoAsync(usuarioId,
+                () => ActualizarCvCoreAsync(usuarioId, cvId, request, cancellationToken), cancellationToken);
+        return await ActualizarCvCoreAsync(usuarioId, cvId, request, cancellationToken);
+    }
+
+    private async Task<CvResponse?> ActualizarCvCoreAsync(
+        Guid usuarioId, Guid cvId, ActualizarCvRequest request, CancellationToken cancellationToken)
+    {
         var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
         if (cv is null) return null;
+        if (cv.Version != request.Version)
+            throw new CvConflictoException("El CV cambio desde que lo consultaste. Actualiza y volve a intentar.");
 
         if (request.Titulo is null && request.TextoPlano is null && request.EsPrincipal is null)
             throw new ValidationException(
                 "Indicá al menos un dato para actualizar: el título, el contenido o si es tu CV principal.");
 
-        // Se valida todo antes de modificar nada, para no dejar el CV a medias si algo es inválido.
         var titulo = request.Titulo is null ? null : ValidarTitulo(request.Titulo);
         var texto = request.TextoPlano is null ? null : ValidarTexto(request.TextoPlano);
 
@@ -239,51 +254,55 @@ public class CvService(
             throw new ValidationException(
                 "Tenés que tener un CV principal. Marcá otro CV como principal y este dejará de serlo.");
 
-        if (titulo is not null) cv.Titulo = titulo;
-        if (request.TextoPlano is not null) cv.TextoPlano = texto;
-
         if (request.EsPrincipal is true && !cv.EsPrincipal)
         {
             var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, cancellationToken);
             foreach (var otro in existentes.Where(c => c.Id != cv.Id)) otro.EsPrincipal = false;
+            // Primera escritura dentro de la misma transaccion, antes de marcar el nuevo principal.
+            await cvs.GuardarCambiosAsync(cancellationToken);
             cv.EsPrincipal = true;
         }
 
+        if (titulo is not null) cv.Titulo = titulo;
+        if (request.TextoPlano is not null) cv.TextoPlano = texto;
         cv.FechaActualizacion = DateTime.UtcNow;
         await cvs.GuardarCambiosAsync(cancellationToken);
-
         return ToResponse(cv);
     }
 
     /// <summary>Devuelve false si el CV no existe o no es de la persona.</summary>
     public async Task<bool> EliminarAsync(
-        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
+        Guid usuarioId, Guid cvId, long version, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return false;
+        if (version < 1) throw new ValidationException("Envia la version del CV que consultaste.");
 
-        var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
-        if (cv is null) return false;
-
-        var eraPrincipal = cv.EsPrincipal;
-        cvs.Eliminar(cv);
-
-        if (eraPrincipal)
+        var clave = await cvs.EjecutarExclusivoAsync(usuarioId, async () =>
         {
-            var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, cancellationToken);
-            var siguiente = existentes
-                .Where(c => c.Id != cv.Id)
-                .OrderByDescending(c => c.FechaActualizacion)
-                .FirstOrDefault();
+            var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
+            if (cv is null) return (Encontrado: false, Archivo: (string?)null);
+            if (cv.Version != version)
+                throw new CvConflictoException("El CV cambio desde que lo consultaste. Actualiza y volve a intentar.");
 
-            if (siguiente is not null) siguiente.EsPrincipal = true;
-        }
+            var eraPrincipal = cv.EsPrincipal;
+            cvs.Eliminar(cv);
+            await cvs.GuardarCambiosAsync(cancellationToken);
+            if (eraPrincipal)
+            {
+                var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, cancellationToken);
+                var siguiente = existentes.OrderByDescending(c => c.FechaActualizacion).FirstOrDefault();
+                if (siguiente is not null)
+                {
+                    siguiente.EsPrincipal = true;
+                    await cvs.GuardarCambiosAsync(cancellationToken);
+                }
+            }
+            return (Encontrado: true, Archivo: cv.UrlArchivo);
+        }, cancellationToken);
 
-        await cvs.GuardarCambiosAsync(cancellationToken);
-
-        // Recién cuando la base confirmó el borrado se elimina el archivo físico.
-        if (!string.IsNullOrWhiteSpace(cv.UrlArchivo))
-            await archivos.EliminarAsync(cv.UrlArchivo, CancellationToken.None);
-
+        if (!clave.Encontrado) return false;
+        if (!string.IsNullOrWhiteSpace(clave.Archivo))
+            await archivos.EliminarAsync(clave.Archivo, CancellationToken.None);
         return true;
     }
 
@@ -292,37 +311,42 @@ public class CvService(
         Guid usuarioId, string titulo, string? texto, bool pideSerPrincipal, string? claveArchivo,
         CancellationToken cancellationToken)
     {
-        var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, cancellationToken);
-        if (existentes.Count >= MaxCvsPorUsuario)
-            throw new ValidationException(
-                $"Podés tener hasta {MaxCvsPorUsuario} CV. Eliminá alguno para crear otro.");
-
-        var esPrincipal = pideSerPrincipal || existentes.Count == 0;
-        if (esPrincipal)
+        return await cvs.EjecutarExclusivoAsync(usuarioId, async () =>
         {
-            foreach (var existente in existentes) existente.EsPrincipal = false;
-        }
+            var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, cancellationToken);
+            if (existentes.Count >= MaxCvsPorUsuario)
+                throw new ValidationException(
+                    $"Podés tener hasta {MaxCvsPorUsuario} CV. Eliminá alguno para crear otro.");
 
-        var ahora = DateTime.UtcNow;
-        var cv = new Cv
-        {
-            Id = Guid.NewGuid(),
-            UsuarioId = usuarioId,
-            Titulo = titulo,
-            TextoPlano = texto,
-            UrlArchivo = claveArchivo,
-            EsPrincipal = esPrincipal,
-            FechaCreacion = ahora,
-            FechaActualizacion = ahora,
-        };
+            var esPrincipal = pideSerPrincipal || existentes.Count == 0;
+            if (esPrincipal)
+            {
+                foreach (var existente in existentes) existente.EsPrincipal = false;
+                await cvs.GuardarCambiosAsync(cancellationToken);
+            }
 
-        await cvs.AgregarAsync(cv, cancellationToken);
-        await cvs.GuardarCambiosAsync(cancellationToken);
-        return cv;
+            var ahora = DateTime.UtcNow;
+            var cv = new Cv
+            {
+                Id = Guid.NewGuid(), UsuarioId = usuarioId, Titulo = titulo,
+                TextoPlano = texto, UrlArchivo = claveArchivo, EsPrincipal = esPrincipal,
+                Version = 1, FechaCreacion = ahora, FechaActualizacion = ahora,
+            };
+            await cvs.AgregarAsync(cv, cancellationToken);
+            await cvs.GuardarCambiosAsync(cancellationToken);
+            return cv;
+        }, cancellationToken);
     }
 
     // La clave la genera siempre el servidor (nunca el nombre del cliente): no se puede escribir fuera de la carpeta
     // ni pisar el archivo de otra persona. Se guarda en Cv.UrlArchivo, que es una clave de almacenamiento, no una URL.
+    private static void ComprobarVersion(Cv cv, long version)
+    {
+        if (version < 1) throw new ValidationException("Envia la version del CV que consultaste.");
+        if (cv.Version != version)
+            throw new CvConflictoException("El CV cambio desde que lo consultaste. Actualiza y volve a intentar.");
+    }
+
     private static string NuevaClaveArchivo(Guid usuarioId, string extension) =>
         $"{usuarioId:N}/{Guid.NewGuid():N}{extension}";
 
@@ -380,10 +404,10 @@ public class CvService(
     }
 
     private static CvResumenResponse ToResumen(Cv cv) => new(
-        cv.Id, cv.Titulo, cv.EsPrincipal, TieneArchivo(cv), cv.FechaCreacion, cv.FechaActualizacion);
+        cv.Id, cv.Titulo, cv.EsPrincipal, TieneArchivo(cv), cv.FechaCreacion, cv.FechaActualizacion, cv.Version);
 
     private static CvResponse ToResponse(Cv cv) => new(
-        cv.Id, cv.Titulo, cv.TextoPlano, cv.EsPrincipal, TieneArchivo(cv), cv.FechaCreacion, cv.FechaActualizacion);
+        cv.Id, cv.Titulo, cv.TextoPlano, cv.EsPrincipal, TieneArchivo(cv), cv.FechaCreacion, cv.FechaActualizacion, cv.Version);
 
     private static bool TieneArchivo(Cv cv) => !string.IsNullOrWhiteSpace(cv.UrlArchivo);
 }

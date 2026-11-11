@@ -169,11 +169,11 @@ public class HerramientasCv(ICvUsuarioClient cvs, string accessToken) : IEjecuto
         if (nuevo == actual) return Ok("No hubo cambios: el CV ya tenía ese contenido.");
         if (string.IsNullOrWhiteSpace(nuevo)) return Error("El CV quedaría vacío, así que no se aplicó el cambio.");
 
-        var guardado = await cvs.ActualizarTextoAsync(accessToken, cvId, nuevo, ct);
+        var guardado = await cvs.ActualizarTextoAsync(accessToken, cvId, nuevo, lectura.Cv.Version, ct);
 
         return guardado.Exito
             ? Ok($"CV «{lectura.Cv.Titulo}» actualizado.")
-            : Error($"No se guardó: {guardado.Mensaje}");
+            : Error($"No se guardó: {guardado.Mensaje}. Si el CV cambió, volvé a leerlo antes de editarlo.");
     }
 
     // Los saltos de línea se unifican para que un fragmento con "\n" coincida aunque el CV tenga "\r\n".

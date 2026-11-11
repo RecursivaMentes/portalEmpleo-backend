@@ -26,10 +26,10 @@ public class CvUsuarioClient(HttpClient http, ILogger<CvUsuarioClient> logger) :
     }
 
     public async Task<ResultadoObtenerCv> ActualizarTextoAsync(
-        string accessToken, Guid cvId, string textoPlano, CancellationToken cancellationToken)
+        string accessToken, Guid cvId, string textoPlano, long version, CancellationToken cancellationToken)
     {
         var r = await PedirAsync<CvUsuario>(
-            HttpMethod.Put, $"api/cvs/{cvId}", accessToken, new { textoPlano }, cancellationToken);
+            HttpMethod.Put, $"api/cvs/{cvId}", accessToken, new { textoPlano, version }, cancellationToken);
         return new ResultadoObtenerCv(r.Dato, r.NoEncontrado, r.Mensaje);
     }
 

@@ -8,7 +8,8 @@ public record CvUsuario(
     bool EsPrincipal,
     bool TieneArchivo,
     DateTime FechaCreacion,
-    DateTime FechaActualizacion);
+    DateTime FechaActualizacion,
+    long Version);
 
 /// <summary>Si falló, <see cref="Mensaje"/> explica el motivo (casi siempre la validación de Usuarios).</summary>
 public record ResultadoCrearCv(CvUsuario? Cv, string? Mensaje = null)
@@ -35,7 +36,7 @@ public interface ICvUsuarioClient
 
     /// <summary>Reemplaza el texto de un CV. Usuarios aplica sus reglas (largo máximo) y, si las rechaza, devuelve su mensaje.</summary>
     Task<ResultadoObtenerCv> ActualizarTextoAsync(
-        string accessToken, Guid cvId, string textoPlano, CancellationToken cancellationToken);
+        string accessToken, Guid cvId, string textoPlano, long version, CancellationToken cancellationToken);
 
     /// <summary>Lee un CV de la persona dueña del token. "No encontrado" vale tanto si no existe como si es de otra persona.</summary>
     Task<ResultadoObtenerCv> ObtenerAsync(string accessToken, Guid cvId, CancellationToken cancellationToken);
