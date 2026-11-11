@@ -58,26 +58,21 @@ public class AuthController(AuthService authService) : ControllerBase
             return BadRequest(new { message = "Debe indicar al menos un campo para actualizar." });
         }
 
-        if ((request.Nombre is not null && string.IsNullOrWhiteSpace(request.Nombre)) ||
-            (request.Apellido is not null && string.IsNullOrWhiteSpace(request.Apellido)))
-        {
-            return BadRequest(new { message = "El nombre y el apellido no pueden estar vacios." });
-        }
-
-        if (request.PreferenciasJson is not null)
-        {
+       
+        if (request.PreferenciasJson is not null){
             try
-            {
+            {   
                 using var json = JsonDocument.Parse(request.PreferenciasJson);
-                if (json.RootElement.ValueKind != JsonValueKind.Object)
-                    return UnprocessableEntity(new { message = "PreferenciasJson debe ser un objeto JSON." });
+                if (json.RootElement.ValueKind != JsonValueKind.Object){
+                    ModelState.AddModelError("PreferenciasJson", "PreferenciasJson debe ser un objeto JSON.");
+                    return ValidationProblem();
+                }
             }
-            catch (JsonException)
-            {
-                return BadRequest(new { message = "PreferenciasJson no contiene JSON valido." });
+            catch (JsonException){
+                ModelState.AddModelError("PreferenciasJson", "PreferenciasJson no contiene JSON válido.");
+                return ValidationProblem();
             }
         }
-
         var exito = await authService.UpdateAsync(userId, request, cancellationToken);
         if (!exito)
             return NotFound(new { message = "Usuario no encontrado." });
