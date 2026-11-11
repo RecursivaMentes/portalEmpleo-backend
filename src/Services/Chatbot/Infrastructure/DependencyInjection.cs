@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Application.Chats;
+using Application.Cvs;
 using Application.Perfil;
 using Chatbot.Infrastructure.Ai;
 using Chatbot.Infrastructure.Clients;
@@ -59,6 +60,11 @@ public static class DependencyInjection
         services.AddSingleton<IPerfilUsuarioClient>(sp => new UsuariosClient(
             new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(10) },
             sp.GetRequiredService<ILogger<UsuariosClient>>()));
+
+        // Crear un CV en Usuarios es una escritura simple y rápida: el mismo tiempo de espera alcanza.
+        services.AddSingleton<ICvUsuarioClient>(sp => new CvUsuarioClient(
+            new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(10) },
+            sp.GetRequiredService<ILogger<CvUsuarioClient>>()));
     }
 
     private static void AddClaude(IServiceCollection services, IConfiguration configuration)

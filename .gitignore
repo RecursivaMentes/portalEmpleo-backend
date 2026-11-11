@@ -4,3 +4,5 @@ obj/
 *.user
 
 /tests/
+# Archivos de CV subidos por las personas (datos personales, no van al repositorio)
+App_Data/

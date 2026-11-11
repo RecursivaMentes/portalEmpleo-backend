@@ -33,7 +33,10 @@ public class UsuariosClient(HttpClient http, ILogger<UsuariosClient> logger) : I
                 personales.Nombre ?? string.Empty,
                 personales.PreferenciasJson ?? "{}",
                 personales.ReglasPostulacion,
-                ToDominio(laboralTask.Result));
+                ToDominio(laboralTask.Result),
+                personales.Apellido ?? string.Empty,
+                personales.Email,
+                personales.Telefono);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException
                                    && !cancellationToken.IsCancellationRequested)
@@ -100,7 +103,7 @@ public class UsuariosClient(HttpClient http, ILogger<UsuariosClient> logger) : I
 
             // Los cuerpos pueden tener datos personales: se registra solo el estado, nunca el contenido.
             logger.LogWarning("Usuarios respondió {Status} en PUT {Ruta}.", (int)response.StatusCode, ruta);
-            return new ResultadoEscritura(false, await LeerMensajeAsync(response, cancellationToken));
+            return new ResultadoEscritura(false, await LectorErroresUsuarios.LeerMensajeAsync(response, cancellationToken));
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException
                                    && !cancellationToken.IsCancellationRequested)
@@ -108,37 +111,6 @@ public class UsuariosClient(HttpClient http, ILogger<UsuariosClient> logger) : I
             logger.LogWarning(ex, "No se pudo escribir en el servicio Usuarios (PUT {Ruta}).", ruta);
             return new ResultadoEscritura(false, "No se pudo comunicar con el servicio de perfiles.");
         }
-    }
-
-    /// <summary>Extrae el mensaje de error de Usuarios ({ "message": ... } o ProblemDetails).</summary>
-    private static async Task<string> LeerMensajeAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        var generico = $"El servicio de perfiles respondió con el estado {(int)response.StatusCode}.";
-
-        try
-        {
-            using var doc = await JsonDocument.ParseAsync(
-                await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-
-            if (doc.RootElement.ValueKind != JsonValueKind.Object) return generico;
-
-            if (doc.RootElement.TryGetProperty("message", out var mensaje) && mensaje.ValueKind == JsonValueKind.String)
-                return mensaje.GetString() ?? generico;
-
-            if (doc.RootElement.TryGetProperty("errors", out var errores) && errores.ValueKind == JsonValueKind.Object)
-            {
-                foreach (var campo in errores.EnumerateObject())
-                    foreach (var texto in campo.Value.EnumerateArray())
-                        if (texto.ValueKind == JsonValueKind.String)
-                            return $"{campo.Name}: {texto.GetString()}";
-            }
-
-            if (doc.RootElement.TryGetProperty("title", out var titulo) && titulo.ValueKind == JsonValueKind.String)
-                return titulo.GetString() ?? generico;
-        }
-        catch (JsonException) { }
-
-        return generico;
     }
 
     /// <summary>Devuelve null si el endpoint responde 404 u otro error: se lo trata como "sin datos".</summary>
@@ -180,7 +152,9 @@ public class UsuariosClient(HttpClient http, ILogger<UsuariosClient> logger) : I
 
     // Formato que expone Usuarios. Se declara acá, sin compartir código entre servicios, y las
     // fechas se leen como texto para no fallar si Usuarios cambia el formato.
-    private record ProfileDto(string? Nombre, string? PreferenciasJson, string? ReglasPostulacion);
+    private record ProfileDto(
+        string? Nombre, string? Apellido, string? Email, string? Telefono,
+        string? PreferenciasJson, string? ReglasPostulacion);
 
     private record PerfilLaboralDto(
         string? Resumen,
