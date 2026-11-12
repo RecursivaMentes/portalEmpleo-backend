@@ -36,4 +36,16 @@ public sealed class PostulacionException : Exception
 
     public static PostulacionException Duplicada(Exception? innerException = null) =>
         new("POSTULACION_DUPLICADA", "Ya te postulaste a esta oferta laboral.", innerException);
+
+    public static PostulacionException PendienteDuplicado() =>
+        new("PENDIENTE_DUPLICADO", "La oferta ya se encuentra en pendientes.");
+
+    public static PostulacionException PreparacionDuplicada() =>
+        new("PREPARACION_DUPLICADA", "Ya existe una preparacion pendiente para esta oferta.");
+
+    public static PostulacionException IaOcupada() =>
+        new("IA_OCUPADA", "La IA esta trabajando en otra postulacion.");
+
+    public static PostulacionException PreparacionNoCancelable() =>
+        new("PREPARACION_NO_CANCELABLE", "La preparacion no puede cancelarse en este estado.");
 }

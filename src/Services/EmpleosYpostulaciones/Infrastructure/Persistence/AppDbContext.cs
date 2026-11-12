@@ -10,6 +10,8 @@ public class AppDbContext : DbContext
     // Tablas exclusivas de este microservicio
     public DbSet<Empleo> Empleos { get; set; }
     public DbSet<Postulacion> Postulaciones { get; set; }
+    public DbSet<EmpleoPendiente> EmpleosPendientes { get; set; }
+    public DbSet<PreparacionPostulacion> PreparacionesPostulacion { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

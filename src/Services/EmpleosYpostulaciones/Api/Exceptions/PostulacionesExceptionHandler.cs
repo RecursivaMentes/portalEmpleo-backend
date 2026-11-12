@@ -39,6 +39,7 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
         "DATOS_INVALIDOS" or "PRESENTACION_INVALIDA" => StatusCodes.Status400BadRequest,
         "OFERTA_NO_ENCONTRADA" or "CV_NO_ENCONTRADO" => StatusCodes.Status404NotFound,
         "OFERTA_NO_DISPONIBLE" or "OFERTA_FINALIZADA" or "PERFIL_INCOMPLETO" or "POSTULACION_DUPLICADA"
+            or "PENDIENTE_DUPLICADO" or "PREPARACION_DUPLICADA" or "IA_OCUPADA" or "PREPARACION_NO_CANCELABLE"
             => StatusCodes.Status409Conflict,
         _ => StatusCodes.Status500InternalServerError
     };

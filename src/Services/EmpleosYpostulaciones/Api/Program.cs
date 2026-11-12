@@ -17,6 +17,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<EmpleoService>();
 builder.Services.AddScoped<PostulacionService>();
+builder.Services.AddScoped<PendientesService>();
+builder.Services.AddScoped<PreparacionesService>();
 builder.Services.AddHttpClient<ICvValidationClient, CvValidationHttpClient>(client =>
 {
     var baseUrl = builder.Configuration["Services:Usuarios:BaseUrl"]
@@ -110,5 +112,6 @@ app.UseAuthorization();
 
 app.MapEmpleosEndpoints();
 app.MapPostulacionesEndpoints();
+app.MapPendientesYPreparacionesEndpoints();
 
 app.Run();
