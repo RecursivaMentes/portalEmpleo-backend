@@ -1,6 +1,7 @@
 using Application.Auth;
 using Application.Cvs;
 using Application.PerfilLaboral;
+using Application.Postulaciones;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 using Usuarios.Infrastructure;
@@ -124,6 +125,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PerfilLaboralService>();
+builder.Services.AddScoped<ConfiguracionPostulacionesService>();
 builder.Services.AddScoped<CvService>();
 
 var issuer = builder.Configuration["Jwt:Issuer"]
