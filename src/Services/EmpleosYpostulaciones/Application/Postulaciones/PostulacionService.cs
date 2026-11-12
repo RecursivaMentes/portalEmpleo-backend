@@ -3,7 +3,7 @@ using Domain.Enums;
 
 namespace Application.Postulaciones;
 
-public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation)
+public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation, IPerfilLaboralValidationClient perfilValidation)
 {
     public async Task<Postulacion> CrearAsync(
         CrearPostulacionRequest request,
@@ -35,6 +35,14 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
                 "La oferta laboral ya finalizó.");
         }
 
+        var validacionPerfil = await perfilValidation.ValidarAsync(token, cancellationToken);
+        if (!validacionPerfil.PerfilCompleto)
+        {
+            var detalles = validacionPerfil.Faltantes is { Count: > 0 }
+                ? string.Join(", ", validacionPerfil.Faltantes)
+                : "datos obligatorios del perfil";
+            throw new InvalidOperationException($"El perfil laboral estÃ¡ incompleto. Faltan: {detalles}.");
+        }
         if (!await cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, cancellationToken))
             throw new KeyNotFoundException("El CV no existe o no pertenece al usuario.");
 

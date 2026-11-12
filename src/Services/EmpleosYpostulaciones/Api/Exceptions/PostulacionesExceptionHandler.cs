@@ -12,9 +12,9 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
             ArgumentException ex => (StatusCodes.Status400BadRequest, ex.Message),
             KeyNotFoundException ex => (StatusCodes.Status404NotFound, ex.Message),
             InvalidOperationException ex => (StatusCodes.Status409Conflict, ex.Message),
-            HttpRequestException => (StatusCodes.Status503ServiceUnavailable, "No fue posible validar el CV con Usuarios."),
+            HttpRequestException => (StatusCodes.Status503ServiceUnavailable, "No fue posible completar la validaciÃ³n con Usuarios."),
             TaskCanceledException when (!cancellationToken.IsCancellationRequested)
-                => (StatusCodes.Status503ServiceUnavailable, "La validacion del CV excedio el tiempo de espera."),
+                => (StatusCodes.Status503ServiceUnavailable, "La validaciÃ³n con Usuarios excediÃ³ el tiempo de espera."),
             _ => (StatusCodes.Status500InternalServerError, "Ocurrio un error interno al procesar la solicitud.")
         };
 

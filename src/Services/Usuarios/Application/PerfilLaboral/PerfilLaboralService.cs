@@ -41,6 +41,17 @@ public class PerfilLaboralService(
         return perfil is null ? null : ConstruirRespuesta(perfil);
     }
 
+    public async Task<ValidacionPerfilLaboralResponse?> ValidarCompletitudAsync(
+        Guid usuarioId,
+        CancellationToken cancellationToken = default)
+    {
+        var usuario = await usuarios.GetByIdAsync(usuarioId, cancellationToken);
+        if (usuario is null || !usuario.Estado) return null;
+
+        var perfil = await perfiles.ObtenerPorUsuarioIdAsync(usuarioId, cancellationToken);
+        var respuesta = perfil is null ? null : ConstruirRespuesta(perfil);
+        return PerfilCompletitud.Evaluar(usuario, respuesta);
+    }
     public async Task<(PerfilLaboralResponse Perfil, bool Creado)?> GuardarAsync(
         Guid usuarioId,
         GuardarPerfilLaboralRequest request,

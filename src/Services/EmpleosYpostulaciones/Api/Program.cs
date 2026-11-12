@@ -25,6 +25,13 @@ builder.Services.AddHttpClient<ICvValidationClient, CvValidationHttpClient>(clie
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+builder.Services.AddHttpClient<IPerfilLaboralValidationClient, PerfilLaboralValidationHttpClient>(client =>
+{
+    var baseUrl = builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl");
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(
