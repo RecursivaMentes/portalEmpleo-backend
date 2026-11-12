@@ -56,7 +56,7 @@ public class RecomendacionesServiceTests
             new HttpHandlerSimulado(request =>
             {
                 Assert.Equal(
-                    $"/api/perfiles/{UsuarioId}",
+                    "/api/perfil-laboral/me",
                     request.RequestUri!.AbsolutePath);
 
                 return RespuestaJson(perfilJson, perfilStatus);
@@ -69,7 +69,7 @@ public class RecomendacionesServiceTests
             new HttpHandlerSimulado(request =>
             {
                 Assert.Equal(
-                    "/api/empleos/activos",
+                    "/api/empleos",
                     request.RequestUri!.AbsolutePath);
 
                 return RespuestaJson(empleosJson);
@@ -89,8 +89,11 @@ public class RecomendacionesServiceTests
 
     private const string PerfilValido = """
         {
-          "usuarioId": "11111111-1111-1111-1111-111111111111",
-          "habilidadesJson": "[\"C#\",\"SQL\",\"React\"]",
+          "habilidades": [
+            { "nombre": "C#" },
+            { "nombre": "SQL" },
+            { "nombre": "React" }
+          ],
           "resumen": "Desarrollador de software"
         }
         """;
@@ -132,7 +135,7 @@ public class RecomendacionesServiceTests
             EmpleosValidos());
 
         var resultado =
-            await servicio.ObtenerRecomendacionesAsync(UsuarioId);
+            await servicio.ObtenerRecomendacionesAsync(UsuarioId, "token");
 
         Assert.NotNull(resultado);
         Assert.Equal(3, resultado.Count);
@@ -155,7 +158,7 @@ public class RecomendacionesServiceTests
             EmpleosValidos());
 
         var resultado =
-            await servicio.ObtenerRecomendacionesAsync(UsuarioId);
+            await servicio.ObtenerRecomendacionesAsync(UsuarioId, "token");
 
         Assert.NotNull(resultado);
 
@@ -180,7 +183,7 @@ public class RecomendacionesServiceTests
             HttpStatusCode.NotFound);
 
         var resultado =
-            await servicio.ObtenerRecomendacionesAsync(UsuarioId);
+            await servicio.ObtenerRecomendacionesAsync(UsuarioId, "token");
 
         Assert.Null(resultado);
     }
@@ -193,33 +196,19 @@ public class RecomendacionesServiceTests
             "[]");
 
         var resultado =
-            await servicio.ObtenerRecomendacionesAsync(UsuarioId);
+            await servicio.ObtenerRecomendacionesAsync(UsuarioId, "token");
 
         Assert.NotNull(resultado);
         Assert.Empty(resultado);
     }
 
     [Fact]
-    public async Task EmpleosCerradosYVencidos_NoSeRecomiendan()
+    public async Task SoloSeAnalizanLasOfertasPublicadasDevueltasPorEmpleos()
     {
+        // Recomendaciones consume el listado de Empleos, que es responsable
+        // de determinar que ofertas publica. No filtra estados por su cuenta.
         var empleos = $$"""
         [
-          {
-            "id": "{{Guid.NewGuid()}}",
-            "titulo": "Oferta cerrada",
-            "requisitos": "C#,SQL",
-            "modalidad": 1,
-            "estado": 2,
-            "fechaCierre": null
-          },
-          {
-            "id": "{{Guid.NewGuid()}}",
-            "titulo": "Oferta vencida",
-            "requisitos": "React",
-            "modalidad": 1,
-            "estado": 1,
-            "fechaCierre": "2020-01-01T00:00:00Z"
-          },
           {
             "id": "{{EmpleoDotNetId}}",
             "titulo": "Oferta activa",
@@ -231,19 +220,14 @@ public class RecomendacionesServiceTests
         ]
         """;
 
-        var servicio = CrearServicio(
-            PerfilValido,
-            empleos);
-
-        var resultado =
-            await servicio.ObtenerRecomendacionesAsync(UsuarioId);
+        var servicio = CrearServicio(PerfilValido, empleos);
+        var resultado = await servicio.ObtenerRecomendacionesAsync(UsuarioId, "token");
 
         Assert.NotNull(resultado);
         Assert.Single(resultado);
         Assert.Equal("Oferta activa", resultado[0].Titulo);
         Assert.Equal(100m, resultado[0].PorcentajeCompatibilidad);
     }
-
     [Fact]
     public async Task EmpleosSinRequisitos_NoSeRecomiendan()
     {
@@ -265,7 +249,7 @@ public class RecomendacionesServiceTests
             empleos);
 
         var resultado =
-            await servicio.ObtenerRecomendacionesAsync(UsuarioId);
+            await servicio.ObtenerRecomendacionesAsync(UsuarioId, "token");
 
         Assert.NotNull(resultado);
         Assert.Empty(resultado);
