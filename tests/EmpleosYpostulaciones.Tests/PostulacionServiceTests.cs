@@ -144,6 +144,90 @@ public class PostulacionServiceTests
         Assert.Equal(0, repositorio.Guardadas);
     }
 
+    [Fact]
+    public async Task ConsultaIndividual_Propietario_ObtieneDatosBasicos()
+    {
+        var usuarioId = Guid.NewGuid();
+        var postulacion = PostulacionDe(usuarioId);
+        var repositorio = new RepositorioFalso { PostulacionPorId = postulacion };
+
+        var resultado = await CrearServicio(repositorio)
+            .ObtenerPorIdAsync(postulacion.Id, usuarioId);
+
+        Assert.NotNull(resultado);
+        Assert.Equal(postulacion.Id, resultado.Id);
+        Assert.Equal(postulacion.UsuarioId, resultado.UsuarioId);
+        Assert.Equal(postulacion.EmpleoId, resultado.EmpleoId);
+        Assert.Equal(postulacion.CvId, resultado.CvId);
+        Assert.Equal(postulacion.Estado, resultado.Estado);
+        Assert.Equal(postulacion.FechaPostulacion, resultado.FechaPostulacion);
+        Assert.Null(typeof(PostulacionResponse).GetProperty(nameof(Postulacion.Observaciones)));
+        Assert.Null(typeof(PostulacionResponse).GetProperty(nameof(Postulacion.TextoPresentacion)));
+        Assert.Null(typeof(PostulacionResponse).GetProperty(nameof(Postulacion.HistorialEstadosJson)));
+    }
+
+    [Fact]
+    public async Task ConsultaIndividual_DeOtroUsuario_NoEntregaDatos()
+    {
+        var postulacion = PostulacionDe(Guid.NewGuid());
+        var repositorio = new RepositorioFalso { PostulacionPorId = postulacion };
+
+        var resultado = await CrearServicio(repositorio)
+            .ObtenerPorIdAsync(postulacion.Id, Guid.NewGuid());
+
+        Assert.Null(resultado);
+    }
+
+    [Fact]
+    public async Task ConsultaIndividual_Inexistente_NoEntregaDatos()
+    {
+        var resultado = await CrearServicio(new RepositorioFalso())
+            .ObtenerPorIdAsync(Guid.NewGuid(), Guid.NewGuid());
+
+        Assert.Null(resultado);
+    }
+
+    [Fact]
+    public async Task ConsultaIndividual_IdentificadoresVacios_SeRechazan()
+    {
+        var servicio = CrearServicio(new RepositorioFalso());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => servicio.ObtenerPorIdAsync(Guid.Empty, Guid.NewGuid()));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => servicio.ObtenerPorIdAsync(Guid.NewGuid(), Guid.Empty));
+    }
+
+    [Fact]
+    public async Task ConsultaListado_UsaServicioYNoExponeDatosInternos()
+    {
+        var usuarioId = Guid.NewGuid();
+        var propia = PostulacionDe(usuarioId);
+        var ajena = PostulacionDe(Guid.NewGuid());
+        var repositorio = new RepositorioFalso();
+        repositorio.Postulaciones.Add(propia);
+        repositorio.Postulaciones.Add(ajena);
+
+        var resultado = await CrearServicio(repositorio).ObtenerPorUsuarioAsync(usuarioId);
+
+        var unica = Assert.Single(resultado);
+        Assert.Equal(propia.Id, unica.Id);
+        Assert.Equal(usuarioId, unica.UsuarioId);
+        Assert.Null(typeof(PostulacionResponse).GetProperty(nameof(Postulacion.RequiereAprobacion)));
+    }
+
+    private static Postulacion PostulacionDe(Guid usuarioId) => new()
+    {
+        Id = Guid.NewGuid(),
+        UsuarioId = usuarioId,
+        EmpleoId = Guid.NewGuid(),
+        CvId = Guid.NewGuid(),
+        Estado = EstadoPostulacion.Pendiente,
+        FechaPostulacion = DateTime.UtcNow,
+        TextoPresentacion = "Presentacion privada",
+        Observaciones = "Observaciones privadas",
+        HistorialEstadosJson = "[]"
+    };
     private static PostulacionService CrearServicio(
         RepositorioFalso repositorio, CvFalso? cv = null, PerfilFalso? perfil = null) =>
         new(repositorio, cv ?? new CvFalso(), perfil ?? new PerfilFalso());
@@ -161,6 +245,8 @@ public class PostulacionServiceTests
         };
         public bool YaPostulado { get; set; }
         public int Guardadas { get; private set; }
+        public Postulacion? PostulacionPorId { get; set; }
+        public List<Postulacion> Postulaciones { get; } = [];
 
         public Task<Empleo?> ObtenerEmpleoAsync(Guid empleoId, CancellationToken ct = default) =>
             Task.FromResult(Oferta);
@@ -175,10 +261,10 @@ public class PostulacionServiceTests
         }
 
         public Task<List<Postulacion>> ObtenerPorUsuarioAsync(Guid usuarioId, CancellationToken ct = default) =>
-            Task.FromResult(new List<Postulacion>());
+            Task.FromResult(Postulaciones.Where(p => p.UsuarioId == usuarioId).ToList());
 
         public Task<Postulacion?> ObtenerPorIdAsync(Guid postulacionId, CancellationToken ct = default) =>
-            Task.FromResult<Postulacion?>(null);
+            Task.FromResult(PostulacionPorId?.Id == postulacionId ? PostulacionPorId : null);
     }
 
     private sealed class CvFalso : ICvValidationClient

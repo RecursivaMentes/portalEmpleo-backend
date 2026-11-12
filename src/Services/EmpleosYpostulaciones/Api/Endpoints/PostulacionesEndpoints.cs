@@ -41,20 +41,12 @@ public static class PostulacionesEndpoints
 
             return Results.Created(
                 $"/api/postulaciones/{postulacion.Id}",
-                new
-                {
-                    postulacion.Id,
-                    postulacion.UsuarioId,
-                    postulacion.EmpleoId,
-                    postulacion.CvId,
-                    postulacion.Estado,
-                    postulacion.FechaPostulacion
-                });
+                PostulacionResponse.DesdeEntidad(postulacion));
         });
 
         grupo.MapGet("/me", async (
             ClaimsPrincipal usuario,
-            IPostulacionRepository repository,
+            PostulacionService servicio,
             CancellationToken cancellationToken) =>
         {
             var usuarioIdToken = usuario.FindFirst("sub")?.Value;
@@ -62,18 +54,29 @@ public static class PostulacionesEndpoints
             if (!Guid.TryParse(usuarioIdToken, out var usuarioAutenticado))
                 return Results.Unauthorized();
 
-            var postulaciones = await repository.ObtenerPorUsuarioAsync(
+            var postulaciones = await servicio.ObtenerPorUsuarioAsync(
                 usuarioAutenticado, cancellationToken);
 
-            return Results.Ok(postulaciones.Select(p => new
-            {
-                p.Id,
-                p.UsuarioId,
-                p.EmpleoId,
-                p.CvId,
-                p.Estado,
-                p.FechaPostulacion
-            }));
+            return Results.Ok(postulaciones);
+        });
+
+        // La ruta /{id:guid} evita conflictos con /me. Todo el grupo exige JWT.
+        grupo.MapGet("/{id:guid}", async (
+            Guid id,
+            ClaimsPrincipal usuario,
+            PostulacionService servicio,
+            CancellationToken cancellationToken) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+
+            var postulacion = await servicio.ObtenerPorIdAsync(
+                id, usuarioId, cancellationToken);
+
+            // Mismo resultado cuando no existe o pertenece a otro usuario.
+            return postulacion is null
+                ? Results.NotFound()
+                : Results.Ok(postulacion);
         });
     }
 }

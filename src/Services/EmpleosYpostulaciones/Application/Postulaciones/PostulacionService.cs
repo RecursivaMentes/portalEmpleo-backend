@@ -65,7 +65,7 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
         return postulacion;
     }
     
-    public async Task<List<Postulacion>> ObtenerPorUsuarioAsync(
+    public async Task<List<PostulacionResponse>> ObtenerPorUsuarioAsync(
         Guid usuarioId,
         CancellationToken cancellationToken = default)
     {
@@ -75,8 +75,23 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
                 "El identificador del usuario es obligatorio.");
         }
 
-        return await repository.ObtenerPorUsuarioAsync(
-            usuarioId,
-            cancellationToken);
+        var postulaciones = await repository.ObtenerPorUsuarioAsync(
+            usuarioId, cancellationToken);
+        return postulaciones.Select(PostulacionResponse.DesdeEntidad).ToList();
+    }
+
+    public async Task<PostulacionResponse?> ObtenerPorIdAsync(
+        Guid postulacionId,
+        Guid usuarioId,
+        CancellationToken cancellationToken = default)
+    {
+        if (postulacionId == Guid.Empty || usuarioId == Guid.Empty)
+            throw new ArgumentException("Los identificadores de postulación y usuario son obligatorios.");
+
+        var postulacion = await repository.ObtenerPorIdAsync(postulacionId, cancellationToken);
+        if (postulacion is null || postulacion.UsuarioId != usuarioId)
+            return null;
+
+        return PostulacionResponse.DesdeEntidad(postulacion);
     }
 }
