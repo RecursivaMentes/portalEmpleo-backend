@@ -15,9 +15,10 @@ public sealed record ConfiguracionPostulaciones(
     string? Modo,
     int CompatibilidadMinima,
     int LimiteDiario,
-    PreferenciasLaborales? Preferencias)
+    PreferenciasLaborales? Preferencias,
+    string? OrdenPendientes = null)
 {
     // El usuario no activa el procesamiento autonomo por omision.
     public static ConfiguracionPostulaciones Predeterminada() =>
-        new("Desactivada", 60, 5, PreferenciasLaborales.Vacias());
+        new("Desactivada", 60, 5, PreferenciasLaborales.Vacias(), "Prioridad");
 }

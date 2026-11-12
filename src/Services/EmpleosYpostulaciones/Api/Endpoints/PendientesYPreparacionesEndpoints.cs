@@ -7,6 +7,14 @@ public static class PendientesYPreparacionesEndpoints
 {
     public sealed record AgregarPendienteRequest(Guid EmpleoId);
 
+    private static string? Token(HttpRequest solicitud)
+    {
+        var autorizacion = solicitud.Headers.Authorization.ToString();
+        if (!autorizacion.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return null;
+        var token = autorizacion["Bearer ".Length..].Trim();
+        return string.IsNullOrEmpty(token) ? null : token;
+    }
+
     public static void MapPendientesYPreparacionesEndpoints(this WebApplication app)
     {
         var grupo = app.MapGroup("/api/postulaciones").RequireAuthorization();
@@ -21,11 +29,14 @@ public static class PendientesYPreparacionesEndpoints
         });
 
         grupo.MapGet("/pendientes/me", async (
-            ClaimsPrincipal usuario, PendientesService servicio, CancellationToken ct) =>
+            ClaimsPrincipal usuario, HttpRequest solicitud, OrdenamientoPendientesService servicio,
+            CancellationToken ct) =>
         {
             if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
                 return Results.Unauthorized();
-            return Results.Ok(await servicio.ListarAsync(usuarioId, ct));
+            var token = Token(solicitud);
+            if (token is null) return Results.Unauthorized();
+            return Results.Ok(await servicio.ListarAsync(usuarioId, token, ct));
         });
 
         grupo.MapGet("/pendientes/{empleoId:guid}", async (
@@ -70,6 +81,55 @@ public static class PendientesYPreparacionesEndpoints
                 return Results.Unauthorized();
             var preparacion = await servicio.ObtenerAsync(id, usuarioId, ct);
             return preparacion is null ? Results.NotFound() : Results.Ok(preparacion);
+        });
+
+        // Proponer solo prepara una previsualizacion; el usuario debe aceptarla expresamente.
+        grupo.MapPost("/preparaciones/{id:guid}/proponer-cambios", async (
+            Guid id, ProponerCambiosRequest request, ClaimsPrincipal usuario, HttpRequest solicitud,
+            RevisionPreparacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var token = Token(solicitud);
+            if (token is null) return Results.Unauthorized();
+            var preparacion = await servicio.ProponerAsync(id, usuarioId, request, token, ct);
+            return preparacion is null ? Results.NotFound() : Results.Ok(preparacion);
+        });
+
+        grupo.MapPost("/preparaciones/{id:guid}/aceptar-cambios", async (
+            Guid id, ConfirmarRevisionRequest request, ClaimsPrincipal usuario, HttpRequest solicitud,
+            RevisionPreparacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var token = Token(solicitud);
+            if (token is null) return Results.Unauthorized();
+            var preparacion = await servicio.AceptarCambiosAsync(id, usuarioId, request.VersionEdicion, token, ct);
+            return preparacion is null ? Results.NotFound() : Results.Ok(preparacion);
+        });
+
+        grupo.MapPost("/preparaciones/{id:guid}/descartar-cambios", async (
+            Guid id, ConfirmarRevisionRequest request, ClaimsPrincipal usuario,
+            RevisionPreparacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var preparacion = await servicio.DescartarCambiosAsync(id, usuarioId, request.VersionEdicion, ct);
+            return preparacion is null ? Results.NotFound() : Results.Ok(preparacion);
+        });
+
+        // Aprobar y enviar es la confirmacion del usuario: NO inicia otra tarea de IA.
+        grupo.MapPost("/preparaciones/{id:guid}/enviar", async (
+            Guid id, ConfirmarRevisionRequest request, ClaimsPrincipal usuario, HttpRequest solicitud,
+            RevisionPreparacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var token = Token(solicitud);
+            if (token is null) return Results.Unauthorized();
+            var postulacion = await servicio.EnviarAsync(id, usuarioId, request.VersionEdicion, token, ct);
+            return postulacion is null ? Results.NotFound() : Results.Created(
+                $"/api/postulaciones/{postulacion.Id}", PostulacionResponse.DesdeEntidad(postulacion));
         });
 
         grupo.MapPost("/preparaciones/{id:guid}/cancelar", async (

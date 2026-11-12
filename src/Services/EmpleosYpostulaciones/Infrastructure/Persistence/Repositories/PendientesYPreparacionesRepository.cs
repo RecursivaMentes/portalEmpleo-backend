@@ -7,8 +7,16 @@ using Npgsql;
 
 namespace EmpleosYpostulaciones.Infrastructure.Persistence.Repositories;
 
-public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendientesYPreparacionesRepository
+public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendientesYPreparacionesRepository, IOrdenamientoPendientesRepository
 {
+    public Task<List<OfertaPendienteDatos>> ObtenerPendientesAsync(Guid usuarioId, CancellationToken ct = default) =>
+        db.EmpleosPendientes.AsNoTracking()
+            .Where(p => p.UsuarioId == usuarioId)
+            .Join(db.Empleos.AsNoTracking(), p => p.EmpleoId, e => e.Id,
+                (p, e) => new OfertaPendienteDatos(p.UsuarioId, p.EmpleoId, p.FechaAgregado,
+                    e.Titulo, e.FechaCierre, e.Ubicacion, e.Modalidad, e.TipoContrato, e.SalarioMin))
+            .ToListAsync(ct);
+
     public Task<EmpleoPendiente?> ObtenerPendienteAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
         db.EmpleosPendientes.AsNoTracking().FirstOrDefaultAsync(
             x => x.UsuarioId == usuarioId && x.EmpleoId == empleoId, ct);

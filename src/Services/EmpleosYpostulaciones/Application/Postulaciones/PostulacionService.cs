@@ -10,6 +10,17 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
         string token,
         CancellationToken cancellationToken = default)
     {
+        var creada = await ValidarYConstruirAsync(request, token, cancellationToken);
+        await repository.AgregarAsync(creada, cancellationToken);
+        return creada;
+    }
+
+    // Valida todo antes de la escritura definitiva. Compartido con el envio asistido.
+    public async Task<Postulacion> ValidarYConstruirAsync(
+        CrearPostulacionRequest request,
+        string token,
+        CancellationToken cancellationToken = default)
+    {
         if (request.UsuarioId == Guid.Empty ||
             request.EmpleoId == Guid.Empty ||
             request.CvId == Guid.Empty)
@@ -59,8 +70,6 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             Estado = EstadoPostulacion.Pendiente,
             FechaPostulacion = DateTime.UtcNow
         };
-
-        await repository.AgregarAsync(postulacion, cancellationToken);
 
         return postulacion;
     }

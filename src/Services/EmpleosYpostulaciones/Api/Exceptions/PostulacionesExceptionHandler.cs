@@ -12,6 +12,8 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
         {
             PostulacionException ex => (EstadoHttp(ex.CodigoError), ex.Message, ex.CodigoError),
             ArgumentException ex => (StatusCodes.Status400BadRequest, ex.Message, "DATOS_INVALIDOS"),
+            Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException =>
+                (StatusCodes.Status409Conflict, "La preparacion fue modificada. Volve a cargarla.", "PREPARACION_DESACTUALIZADA"),
             KeyNotFoundException ex => (StatusCodes.Status404NotFound, ex.Message, "RECURSO_NO_ENCONTRADO"),
             HttpRequestException ex when ex.StatusCode == HttpStatusCode.Unauthorized
                 => (StatusCodes.Status401Unauthorized, "Usuarios rechazó la autenticación de esta solicitud.", "VALIDACION_NO_AUTORIZADA"),
@@ -36,10 +38,13 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
 
     private static int EstadoHttp(string codigoError) => codigoError switch
     {
-        "DATOS_INVALIDOS" or "PRESENTACION_INVALIDA" => StatusCodes.Status400BadRequest,
+        "DATOS_INVALIDOS" or "PRESENTACION_INVALIDA" or "SIN_CAMBIOS" => StatusCodes.Status400BadRequest,
+        "SESION_NO_VALIDA" => StatusCodes.Status401Unauthorized,
+        "ORDENAMIENTO_NO_DISPONIBLE" or "DATOS_EXTERNOS_INVALIDOS" => StatusCodes.Status503ServiceUnavailable,
         "OFERTA_NO_ENCONTRADA" or "CV_NO_ENCONTRADO" => StatusCodes.Status404NotFound,
         "OFERTA_NO_DISPONIBLE" or "OFERTA_FINALIZADA" or "PERFIL_INCOMPLETO" or "POSTULACION_DUPLICADA"
             or "PENDIENTE_DUPLICADO" or "PREPARACION_DUPLICADA" or "IA_OCUPADA" or "PREPARACION_NO_CANCELABLE"
+            or "PREPARACION_NO_EDITABLE" or "PREPARACION_DESACTUALIZADA" or "CAMBIOS_SIN_ACEPTAR"
             => StatusCodes.Status409Conflict,
         _ => StatusCodes.Status500InternalServerError
     };

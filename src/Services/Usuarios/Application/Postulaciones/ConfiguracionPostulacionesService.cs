@@ -30,7 +30,7 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
 
         var raiz = LeerPreferencias(usuario.PreferenciasJson);
         var actual = LeerConfiguracion(raiz);
-        var normalizada = ValidarYNormalizar(solicitud, actual.Preferencias);
+        var normalizada = ValidarYNormalizar(solicitud, actual.Preferencias, actual.OrdenPendientes);
 
         raiz[ClaveConfiguracion] = JsonSerializer.SerializeToNode(normalizada, OpcionesJson);
         usuario.PreferenciasJson = raiz.ToJsonString();
@@ -51,12 +51,14 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
         if (raiz[ClaveConfiguracion] is null)
             return ConfiguracionPostulaciones.Predeterminada();
 
-        return raiz[ClaveConfiguracion]!.Deserialize<ConfiguracionPostulaciones>(OpcionesJson)
+        var recuperada = raiz[ClaveConfiguracion]!.Deserialize<ConfiguracionPostulaciones>(OpcionesJson)
             ?? throw new JsonException("La configuracion guardada no es valida.");
+        return recuperada with { OrdenPendientes = recuperada.OrdenPendientes ?? "Prioridad" };
     }
 
     private static ConfiguracionPostulaciones ValidarYNormalizar(
-        ConfiguracionPostulaciones solicitud, PreferenciasLaborales? anteriores)
+        ConfiguracionPostulaciones solicitud, PreferenciasLaborales? anteriores,
+        string? ordenAnterior)
     {
         if (solicitud is null)
             throw new ValidationException("Debes indicar una configuración de postulaciones.");
@@ -86,8 +88,20 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
             preferencias.ExpectativaSalarial,
             NormalizarLista(preferencias.Exclusiones, "exclusiones"));
 
+        var orden = (solicitud.OrdenPendientes ?? ordenAnterior ?? "Prioridad").Trim();
+        if (string.IsNullOrEmpty(orden)) orden = "Prioridad";
+        orden = orden.ToLowerInvariant() switch
+        {
+            "prioridad" => "Prioridad",
+            "compatibilidad" => "Compatibilidad",
+            "fechacierre" => "FechaCierre",
+            "antiguos" => "Antiguos",
+            "recientes" => "Recientes",
+            _ => throw new ValidationException("El orden debe ser Prioridad, Compatibilidad, FechaCierre, Antiguos o Recientes.")
+        };
+
         return new ConfiguracionPostulaciones(
-            modo, solicitud.CompatibilidadMinima, solicitud.LimiteDiario, normalizadas);
+            modo, solicitud.CompatibilidadMinima, solicitud.LimiteDiario, normalizadas, orden);
     }
 
     private static List<string> NormalizarLista(List<string>? valores, string nombre)

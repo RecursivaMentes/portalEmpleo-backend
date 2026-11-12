@@ -83,6 +83,7 @@ public sealed class PreparacionesService(
                 throw PostulacionException.PreparacionNoCancelable();
         }
         preparacion.FechaActualizacion = DateTime.UtcNow;
+        preparacion.VersionEdicion++;
         await repository.GuardarPreparacionAsync(preparacion, ct);
         return preparacion;
     }

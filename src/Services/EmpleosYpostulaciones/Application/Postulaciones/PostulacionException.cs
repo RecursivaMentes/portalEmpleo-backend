@@ -48,4 +48,19 @@ public sealed class PostulacionException : Exception
 
     public static PostulacionException PreparacionNoCancelable() =>
         new("PREPARACION_NO_CANCELABLE", "La preparacion no puede cancelarse en este estado.");
+
+    public static PostulacionException PreparacionNoEditable() =>
+        new("PREPARACION_NO_EDITABLE", "La preparacion no esta pendiente de aprobacion.");
+    public static PostulacionException PreparacionDesactualizada() =>
+        new("PREPARACION_DESACTUALIZADA", "La preparacion cambio de estado; actualiza antes de enviar.");
+    public static PostulacionException CambiosSinAceptar() =>
+        new("CAMBIOS_SIN_ACEPTAR", "Hay cambios propuestos pendientes de aceptar o descartar.");
+    public static PostulacionException SinCambios() =>
+        new("SIN_CAMBIOS", "No hay cambios nuevos para revisar o aceptar.");
+    public static PostulacionException SesionNoValida() =>
+        new("SESION_NO_VALIDA", "La sesion no permite validar los datos externos.");
+    public static PostulacionException OrdenamientoNoDisponible(Exception? ex = null) =>
+        new("ORDENAMIENTO_NO_DISPONIBLE", "No se pudo consultar el ordenamiento de postulaciones.", ex);
+    public static PostulacionException DatosExternosInvalidos() =>
+        new("DATOS_EXTERNOS_INVALIDOS", "El servicio consultado devolvio datos invalidos.");
 }

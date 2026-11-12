@@ -143,6 +143,30 @@ public class ConfiguracionPostulacionesTests
         Assert.Equal(0, repo.Actualizaciones);
     }
 
+    [Theory]
+    [InlineData("Prioridad")]
+    [InlineData("Compatibilidad")]
+    [InlineData("FechaCierre")]
+    [InlineData("Antiguos")]
+    [InlineData("Recientes")]
+    public async Task OrdenUnico_SeGuardaYRecupera(string orden)
+    {
+        var repo = new RepositorioFalso();
+        var servicio = new ConfiguracionPostulacionesService(repo);
+        await servicio.GuardarAsync(repo.Usuario.Id, Solicitud() with { OrdenPendientes = orden });
+        var resultado = await servicio.ObtenerAsync(repo.Usuario.Id);
+        Assert.Equal(orden, resultado!.OrdenPendientes);
+    }
+
+    [Fact]
+    public async Task OrdenInvalido_NoSeGuarda()
+    {
+        var repo = new RepositorioFalso();
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            new ConfiguracionPostulacionesService(repo).GuardarAsync(
+                repo.Usuario.Id, Solicitud() with { OrdenPendientes = "Otro" }));
+    }
+
     private static ConfiguracionPostulaciones Solicitud() =>
         new("Automatica", 60, 5, PreferenciasLaborales.Vacias());
 
