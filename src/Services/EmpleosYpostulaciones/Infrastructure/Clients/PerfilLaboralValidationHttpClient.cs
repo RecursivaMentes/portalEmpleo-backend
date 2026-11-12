@@ -19,7 +19,9 @@ public sealed class PerfilLaboralValidationHttpClient(HttpClient http) : IPerfil
             return new ValidacionPerfilLaboralResultado(false, ["Perfil laboral o cuenta activa"]);
 
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Usuarios no pudo validar el perfil laboral (HTTP {(int)response.StatusCode}).");
+            throw new HttpRequestException(
+                $"Usuarios no pudo validar el perfil laboral (HTTP {(int)response.StatusCode}).",
+                null, response.StatusCode);
 
         try
         {

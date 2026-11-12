@@ -1,3 +1,4 @@
+using System.Net;
 using Application.Postulaciones;
 using Microsoft.AspNetCore.Diagnostics;
 
@@ -7,15 +8,20 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        var (statusCode, mensaje) = exception switch
+        var (statusCode, mensaje, codigoError) = exception switch
         {
-            ArgumentException ex => (StatusCodes.Status400BadRequest, ex.Message),
-            KeyNotFoundException ex => (StatusCodes.Status404NotFound, ex.Message),
-            InvalidOperationException ex => (StatusCodes.Status409Conflict, ex.Message),
-            HttpRequestException => (StatusCodes.Status503ServiceUnavailable, "No fue posible completar la validaciÃ³n con Usuarios."),
+            PostulacionException ex => (EstadoHttp(ex.CodigoError), ex.Message, ex.CodigoError),
+            ArgumentException ex => (StatusCodes.Status400BadRequest, ex.Message, "DATOS_INVALIDOS"),
+            KeyNotFoundException ex => (StatusCodes.Status404NotFound, ex.Message, "RECURSO_NO_ENCONTRADO"),
+            HttpRequestException ex when ex.StatusCode == HttpStatusCode.Unauthorized
+                => (StatusCodes.Status401Unauthorized, "Usuarios rechazó la autenticación de esta solicitud.", "VALIDACION_NO_AUTORIZADA"),
+            HttpRequestException ex when ex.StatusCode == HttpStatusCode.Forbidden
+                => (StatusCodes.Status403Forbidden, "Usuarios no autorizó la validación de esta solicitud.", "VALIDACION_PROHIBIDA"),
+            HttpRequestException
+                => (StatusCodes.Status503ServiceUnavailable, "No fue posible completar la validación con Usuarios.", "SERVICIO_USUARIOS_NO_DISPONIBLE"),
             TaskCanceledException when (!cancellationToken.IsCancellationRequested)
-                => (StatusCodes.Status503ServiceUnavailable, "La validaciÃ³n con Usuarios excediÃ³ el tiempo de espera."),
-            _ => (StatusCodes.Status500InternalServerError, "Ocurrio un error interno al procesar la solicitud.")
+                => (StatusCodes.Status503ServiceUnavailable, "La validación con Usuarios excedió el tiempo de espera.", "SERVICIO_USUARIOS_TIMEOUT"),
+            _ => (StatusCodes.Status500InternalServerError, "Ocurrió un error interno al procesar la solicitud.", "ERROR_INTERNO")
         };
 
         if (statusCode >= 500)
@@ -24,7 +30,16 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
             logger.LogWarning(exception, "Solicitud de EmpleosYpostulaciones rechazada con HTTP {StatusCode}", statusCode);
 
         context.Response.StatusCode = statusCode;
-        await context.Response.WriteAsJsonAsync(new { mensaje, codigo = statusCode }, cancellationToken);
+        await context.Response.WriteAsJsonAsync(new { mensaje, codigo = statusCode, codigoError }, cancellationToken);
         return true;
     }
+
+    private static int EstadoHttp(string codigoError) => codigoError switch
+    {
+        "DATOS_INVALIDOS" or "PRESENTACION_INVALIDA" => StatusCodes.Status400BadRequest,
+        "OFERTA_NO_ENCONTRADA" or "CV_NO_ENCONTRADO" => StatusCodes.Status404NotFound,
+        "OFERTA_NO_DISPONIBLE" or "OFERTA_FINALIZADA" or "PERFIL_INCOMPLETO" or "POSTULACION_DUPLICADA"
+            => StatusCodes.Status409Conflict,
+        _ => StatusCodes.Status500InternalServerError
+    };
 }

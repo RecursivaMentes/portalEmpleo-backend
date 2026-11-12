@@ -29,11 +29,11 @@ public class PerfilLaboralController(PerfilLaboralService perfiles) : Controller
     public async Task<IActionResult> ValidarCompletitud(CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var usuarioId))
-            return Unauthorized(new { message = "No pudimos verificar tu sesiÃ³n. IniciÃ¡ sesiÃ³n nuevamente." });
+            return Unauthorized(new { message = "No pudimos verificar tu sesión. Iniciá sesión nuevamente." });
 
         var validacion = await perfiles.ValidarCompletitudAsync(usuarioId, cancellationToken);
         return validacion is null
-            ? NotFound(new { message = "No encontramos una cuenta activa para esta sesiÃ³n." })
+            ? NotFound(new { message = "No encontramos una cuenta activa para esta sesión." })
             : Ok(validacion);
     }
     [HttpPut("me")]

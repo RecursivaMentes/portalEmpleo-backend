@@ -15,7 +15,9 @@ public sealed class CvValidationHttpClient(HttpClient http) : ICvValidationClien
         if (response.StatusCode == HttpStatusCode.NoContent) return true;
         if (response.StatusCode == HttpStatusCode.NotFound) return false;
 
-        // Si Usuarios no puede validar, nunca aceptar la postulacion por defecto.
-        throw new HttpRequestException($"Usuarios no pudo validar el CV (HTTP {(int)response.StatusCode}).");
+        // No aceptar la postulación si Usuarios rechaza la sesión o no puede validar el CV.
+        throw new HttpRequestException(
+            $"Usuarios no pudo validar el CV (HTTP {(int)response.StatusCode}).",
+            null, response.StatusCode);
     }
 }

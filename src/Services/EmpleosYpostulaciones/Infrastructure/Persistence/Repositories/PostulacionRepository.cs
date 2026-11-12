@@ -42,7 +42,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
             pg.SqlState == PostgresErrorCodes.UniqueViolation &&
             pg.ConstraintName == "IX_postulaciones_UsuarioId_EmpleoId")
         {
-            throw new InvalidOperationException("El usuario ya se postulÃ³ a esta oferta.");
+            throw PostulacionException.Duplicada(ex);
         }
     }
 

@@ -14,37 +14,32 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             request.EmpleoId == Guid.Empty ||
             request.CvId == Guid.Empty)
         {
-            throw new ArgumentException(
-                "UsuarioId, EmpleoId y CvId son obligatorios.");
+            throw PostulacionException.DatosInvalidos();
         }
+
+        if (request.TextoPresentacion is { Length: > 4000 })
+            throw PostulacionException.PresentacionInvalida();
 
         var empleo = await repository.ObtenerEmpleoAsync(
             request.EmpleoId, cancellationToken);
 
         if (empleo is null)
-            throw new KeyNotFoundException("La oferta laboral no existe.");
+            throw PostulacionException.OfertaNoEncontrada();
 
         if (empleo.Estado != EstadoEmpleo.Publicado)
-            throw new InvalidOperationException(
-                "La oferta laboral no está publicada.");
+            throw PostulacionException.OfertaNoDisponible();
 
         if (empleo.FechaCierre.HasValue &&
             empleo.FechaCierre.Value <= DateTime.UtcNow)
         {
-            throw new InvalidOperationException(
-                "La oferta laboral ya finalizó.");
+            throw PostulacionException.OfertaFinalizada();
         }
 
         var validacionPerfil = await perfilValidation.ValidarAsync(token, cancellationToken);
         if (!validacionPerfil.PerfilCompleto)
-        {
-            var detalles = validacionPerfil.Faltantes is { Count: > 0 }
-                ? string.Join(", ", validacionPerfil.Faltantes)
-                : "datos obligatorios del perfil";
-            throw new InvalidOperationException($"El perfil laboral estÃ¡ incompleto. Faltan: {detalles}.");
-        }
+            throw PostulacionException.PerfilIncompleto(validacionPerfil.Faltantes);
         if (!await cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, cancellationToken))
-            throw new KeyNotFoundException("El CV no existe o no pertenece al usuario.");
+            throw PostulacionException.CvNoEncontrado();
 
         bool yaPostulado = await repository.ExistePostulacionAsync(
             request.UsuarioId,
@@ -52,7 +47,7 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             cancellationToken);
 
         if (yaPostulado)
-            throw new InvalidOperationException("El usuario ya se postulo a esta oferta.");
+            throw PostulacionException.Duplicada();
 
         var postulacion = new Postulacion
         {

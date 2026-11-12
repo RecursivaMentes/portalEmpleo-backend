@@ -35,7 +35,7 @@ public class PerfilCompletitudTests
         Assert.False(resultado.PerfilCompleto);
         Assert.Contains("Resumen profesional", resultado.Faltantes);
         Assert.Contains("Habilidades", resultado.Faltantes);
-        Assert.Contains("Experiencia laboral o declaraciÃ³n SinExperiencia", resultado.Faltantes);
+        Assert.Contains("Experiencia laboral o declaración SinExperiencia", resultado.Faltantes);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class PerfilCompletitudTests
         usuario.Email = "correo-invalido";
         var resultado = PerfilCompletitud.Evaluar(usuario, PerfilValido());
         Assert.False(resultado.PerfilCompleto);
-        Assert.Contains("Correo electrÃ³nico", resultado.Faltantes);
+        Assert.Contains("Correo electrónico", resultado.Faltantes);
     }
 
     private static Usuario UsuarioValido() => new()
