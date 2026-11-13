@@ -14,6 +14,10 @@ public class PreparacionPostulacion
     public OrigenPreparacionPostulacion Origen { get; set; }
     public EstadoPreparacionPostulacion Estado { get; set; } = EstadoPreparacionPostulacion.Preparando;
     public Guid? PostulacionId { get; set; }
+    public string? ModoEjecucion { get; set; }
+    public bool ContabilizadaEnCupo { get; set; }
+    public DateTime? FechaContabilizacionUtc { get; set; }
+    public string? UltimoError { get; set; }
     // Borrador que NO cambia el CV ni la presentacion vigentes hasta la aceptacion.
     public Guid? CvIdPropuesto { get; set; }
     public string? TextoPresentacionPropuesto { get; set; }

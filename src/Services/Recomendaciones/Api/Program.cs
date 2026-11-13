@@ -102,5 +102,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRecomendacionesEndpoints();
+app.MapRecomendacionesInternasEndpoints();
 
 app.Run();

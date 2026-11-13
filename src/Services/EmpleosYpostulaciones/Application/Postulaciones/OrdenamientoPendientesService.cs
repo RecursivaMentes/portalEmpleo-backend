@@ -37,7 +37,8 @@ public interface IDatosExternosOrdenamiento
 
 public sealed class OrdenamientoPendientesService(
     IOrdenamientoPendientesRepository pendientes,
-    IDatosExternosOrdenamiento externos)
+    IDatosExternosOrdenamiento externos,
+    IDatosExternosOrdenamientoInterno? internos = null)
 {
     public async Task<List<PendienteOrdenadoResponse>> ListarAsync(
         Guid usuarioId, string accessToken, CancellationToken ct = default)
@@ -48,6 +49,15 @@ public sealed class OrdenamientoPendientesService(
         if (ofertas.Count == 0) return [];
         var datos = await externos.ObtenerAsync(usuarioId, accessToken, ct);
         return Ordenar(ofertas, datos, DateTime.UtcNow);
+    }
+
+    public async Task<List<PendienteOrdenadoResponse>> ListarInternoAsync(
+        Guid usuarioId, CancellationToken ct = default)
+    {
+        if (internos is null) throw new InvalidOperationException("Ordenamiento interno no configurado.");
+        var ofertas = await pendientes.ObtenerPendientesAsync(usuarioId, ct);
+        if (ofertas.Count == 0) return [];
+        return Ordenar(ofertas, await internos.ObtenerInternoAsync(usuarioId, ct), DateTime.UtcNow);
     }
 
     // Un mismo orden para mostrar la lista y para elegir la siguiente oferta a procesar.

@@ -64,6 +64,52 @@ public class AnalisisOfertasService
             .ToList();
     }
 
+    // Consultas autenticadas entre microservicios; no dependen del JWT del usuario.
+    public async Task<List<CompatibilidadResponse>?> AnalizarInternoAsync(
+        Guid usuarioId, string claveInterna, CancellationToken ct = default)
+    {
+        var perfil = await _usuariosClient.ObtenerPerfilInternoAsync(usuarioId, claveInterna, ct);
+        if (perfil is null) return null;
+        var habilidades = perfil.Habilidades
+            .Where(h => h.TryGetValue("nombre", out var nombre) && !string.IsNullOrWhiteSpace(nombre))
+            .Select(h => h["nombre"]!.Trim()).ToList();
+        var empleos = await _empleosClient.ObtenerEmpleosActivosAsync(ct);
+        var resultados = new List<CompatibilidadResponse>();
+        foreach (var empleo in empleos)
+        {
+            if (string.IsNullOrWhiteSpace(empleo.Requisitos)) continue;
+            var resultado = _compatibilidadService.Analizar(new AnalizarCompatibilidadRequest
+            {
+                UsuarioId = usuarioId, EmpleoId = empleo.Id,
+                Habilidades = habilidades, Requisitos = empleo.Requisitos
+            });
+            resultado.Titulo = empleo.Titulo;
+            resultados.Add(resultado);
+        }
+        return resultados.OrderByDescending(x => x.Score).ToList();
+    }
+
+    public async Task<(CompatibilidadResponse? Resultado, string? Error)> AnalizarEmpleoInternoAsync(
+        Guid usuarioId, Guid empleoId, string claveInterna, CancellationToken ct = default)
+    {
+        var perfil = await _usuariosClient.ObtenerPerfilInternoAsync(usuarioId, claveInterna, ct);
+        if (perfil is null) return (null, "PERFIL_NO_ENCONTRADO");
+        var empleo = (await _empleosClient.ObtenerEmpleosActivosAsync(ct))
+            .FirstOrDefault(x => x.Id == empleoId);
+        if (empleo is null) return (null, "EMPLEO_NO_ENCONTRADO");
+        if (string.IsNullOrWhiteSpace(empleo.Requisitos)) return (null, "REQUISITOS_INSUFICIENTES");
+        var habilidades = perfil.Habilidades
+            .Where(h => h.TryGetValue("nombre", out var nombre) && !string.IsNullOrWhiteSpace(nombre))
+            .Select(h => h["nombre"]!.Trim()).ToList();
+        var resultado = _compatibilidadService.Analizar(new AnalizarCompatibilidadRequest
+        {
+            UsuarioId = usuarioId, EmpleoId = empleo.Id,
+            Habilidades = habilidades, Requisitos = empleo.Requisitos
+        });
+        resultado.Titulo = empleo.Titulo;
+        return (resultado, null);
+    }
+
     // Analiza solo el empleo solicitado, reutilizando el mismo calculo de compatibilidad.
     // La API de Empleos expone actualmente un listado publico; se localiza el empleo
     // por Id, pero NO se recalculan puntuaciones para otras ofertas.

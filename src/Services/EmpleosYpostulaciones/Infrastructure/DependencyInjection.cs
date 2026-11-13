@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IEmpleoRepository, EmpleoRepository>();
         services.AddScoped<IPostulacionRepository, PostulacionRepository>();
         services.AddScoped<IPendientesYPreparacionesRepository, PendientesYPreparacionesRepository>();
+        services.AddScoped<IRegistroProcesamientoAutonomo, RegistroProcesamientoAutonomoRepository>();
         services.AddScoped<IOrdenamientoPendientesRepository, PendientesYPreparacionesRepository>();
         services.AddScoped<IConfirmacionPreparacionRepository, ConfirmacionPreparacionRepository>();
 

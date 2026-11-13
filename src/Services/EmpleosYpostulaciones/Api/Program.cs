@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Application.Empleos;
 using Application.Postulaciones;
 using EmpleosYpostulaciones.Infrastructure.Clients;
+using EmpleosYpostulaciones.Infrastructure.Services;
+using EmpleosYpostulaciones.Api.Services;
 using EmpleosYpostulaciones.Infrastructure;
 using EmpleosYpostulaciones.Api.Endpoints;
 using EmpleosYpostulaciones.Api.Exceptions;
@@ -21,6 +23,12 @@ builder.Services.AddScoped<PendientesService>();
 builder.Services.AddScoped<PreparacionesService>();
 builder.Services.AddScoped<RevisionPreparacionesService>();
 builder.Services.AddScoped<OrdenamientoPendientesService>();
+builder.Services.AddScoped<ProcesamientoAutonomoService>();
+builder.Services.AddScoped<ConsultasAutonomasHttpClient>();
+builder.Services.AddScoped<IConsultasProcesamientoInterno>(s => s.GetRequiredService<ConsultasAutonomasHttpClient>());
+builder.Services.AddScoped<IDatosExternosOrdenamientoInterno>(s => s.GetRequiredService<ConsultasAutonomasHttpClient>());
+builder.Services.AddScoped<IPreparadorPostulacionesIA, PreparadorIAEnEspera>();
+builder.Services.AddHostedService<ProgramadorPostulaciones>();
 builder.Services.AddScoped<IDatosExternosOrdenamiento, DatosOrdenamientoHttpClient>();
 builder.Services.AddHttpClient("UsuariosOrdenPendientes", client =>
 {

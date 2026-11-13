@@ -69,7 +69,8 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException ex) when (EsUnico(ex))
         {
-            // La restriccion en BD protege contra carreras aunque la prevalidacion haya pasado.
+            // No dejar una entidad Added rastreada despues del intento rechazado.
+            db.Entry(preparacion).State = EntityState.Detached;
             throw PostulacionException.IaOcupada();
         }
     }

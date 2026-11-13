@@ -3,7 +3,8 @@ using Domain.Enums;
 
 namespace Application.Postulaciones;
 
-public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation, IPerfilLaboralValidationClient perfilValidation)
+public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation,
+    IPerfilLaboralValidationClient perfilValidation, IConsultasProcesamientoInterno? validacionInterna = null)
 {
     public async Task<Postulacion> CrearAsync(
         CrearPostulacionRequest request,
@@ -15,11 +16,29 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
         return creada;
     }
 
-    // Valida todo antes de la escritura definitiva. Compartido con el envio asistido.
-    public async Task<Postulacion> ValidarYConstruirAsync(
+    // Misma regla de negocio para usuario autenticado e integracion interna.
+    public Task<Postulacion> ValidarYConstruirAsync(
+        CrearPostulacionRequest request, string token, CancellationToken cancellationToken = default) =>
+        ValidarYConstruirComunAsync(request,
+            ct => perfilValidation.ValidarAsync(token, ct),
+            ct => cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, ct), cancellationToken);
+
+    public Task<Postulacion> ValidarYConstruirInternoAsync(
+        CrearPostulacionRequest request, CancellationToken cancellationToken = default)
+    {
+        if (validacionInterna is null) throw new InvalidOperationException("Falta validacion interna.");
+        return ValidarYConstruirComunAsync(request,
+            async ct => await validacionInterna.ValidarPerfilAsync(request.UsuarioId, ct)
+                ?? throw PostulacionException.PerfilIncompleto(null),
+            ct => validacionInterna.ValidarCvAsync(request.UsuarioId, request.CvId, ct),
+            cancellationToken);
+    }
+
+    private async Task<Postulacion> ValidarYConstruirComunAsync(
         CrearPostulacionRequest request,
-        string token,
-        CancellationToken cancellationToken = default)
+        Func<CancellationToken, Task<ValidacionPerfilLaboralResultado>> validarPerfil,
+        Func<CancellationToken, Task<bool>> validarCv,
+        CancellationToken cancellationToken)
     {
         if (request.UsuarioId == Guid.Empty ||
             request.EmpleoId == Guid.Empty ||
@@ -46,10 +65,10 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             throw PostulacionException.OfertaFinalizada();
         }
 
-        var validacionPerfil = await perfilValidation.ValidarAsync(token, cancellationToken);
+        var validacionPerfil = await validarPerfil(cancellationToken);
         if (!validacionPerfil.PerfilCompleto)
             throw PostulacionException.PerfilIncompleto(validacionPerfil.Faltantes);
-        if (!await cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, cancellationToken))
+        if (!await validarCv(cancellationToken))
             throw PostulacionException.CvNoEncontrado();
 
         bool yaPostulado = await repository.ExistePostulacionAsync(
@@ -68,7 +87,11 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             CvId = request.CvId,
             TextoPresentacion = request.TextoPresentacion,
             Estado = EstadoPostulacion.Pendiente,
-            FechaPostulacion = DateTime.UtcNow
+            FechaPostulacion = DateTime.UtcNow,
+            HistorialEstadosJson = System.Text.Json.JsonSerializer.Serialize(new[]
+            {
+                new { estado = "Pendiente", fechaUtc = DateTime.UtcNow }
+            })
         };
 
         return postulacion;

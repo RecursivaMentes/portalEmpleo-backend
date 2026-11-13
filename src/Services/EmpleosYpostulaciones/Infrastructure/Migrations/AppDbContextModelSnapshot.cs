@@ -108,6 +108,42 @@ namespace Infrastructure.Migrations
                     b.ToTable("empleos_pendientes", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.IntentoPostulacionIA", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EmpleoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("PreparacionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Resultado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "FechaUtc");
+
+                    b.HasIndex("UsuarioId", "EmpleoId", "FechaUtc");
+
+                    b.ToTable("intentos_postulacion_ia", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Postulacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -135,6 +171,11 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Observaciones")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<bool>("RequiereAprobacion")
                         .HasColumnType("boolean");
@@ -167,6 +208,9 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("CambiosPendientes")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ContabilizadaEnCupo")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("CvId")
                         .HasColumnType("uuid");
 
@@ -184,8 +228,15 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("FechaActualizacion")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("FechaContabilizacionUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModoEjecucion")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
 
                     b.Property<string>("Origen")
                         .IsRequired()
@@ -202,6 +253,10 @@ namespace Infrastructure.Migrations
                     b.Property<string>("TextoPresentacionPropuesto")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("UltimoError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("UsuarioId")
                         .HasColumnType("uuid");
@@ -223,6 +278,8 @@ namespace Infrastructure.Migrations
                     b.HasIndex("UsuarioId", "EmpleoId")
                         .IsUnique()
                         .HasFilter("\"Estado\" IN ('Preparando', 'EnModificacion', 'PendienteAprobacionCv', 'PendienteAprobacion', 'Enviando', 'CancelacionSolicitada')");
+
+                    b.HasIndex("UsuarioId", "FechaContabilizacionUtc");
 
                     b.ToTable("preparaciones_postulacion", (string)null);
                 });

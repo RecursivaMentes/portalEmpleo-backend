@@ -45,6 +45,13 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
             db.Postulaciones.Add(postulacion);
             prep.PostulacionId = postulacion.Id;
             prep.Estado = EstadoPreparacionPostulacion.Enviada;
+            if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
+                prep.ModoEjecucion == "Automatica" && !prep.ContabilizadaEnCupo)
+            {
+                // Cupo y envio se confirman en la misma transaccion.
+                prep.ContabilizadaEnCupo = true;
+                prep.FechaContabilizacionUtc = DateTime.UtcNow;
+            }
             prep.VersionEdicion++;
             prep.FechaActualizacion = DateTime.UtcNow;
             var pendiente = await db.EmpleosPendientes.FirstOrDefaultAsync(

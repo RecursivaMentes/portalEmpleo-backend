@@ -109,6 +109,8 @@ public sealed class RevisionPreparacionesService(
         var postulacion = await postulaciones.ValidarYConstruirAsync(new CrearPostulacionRequest(
             usuarioId, preparacion.EmpleoId, preparacion.CvId.Value,
             preparacion.TextoPresentacion), token, ct);
+        postulacion.Origen = preparacion.Origen == OrigenPreparacionPostulacion.IniciativaIA
+            ? "Asistida" : "SolicitudUsuario";
         return await confirmacion.ConfirmarEnvioAsync(usuarioId, id, versionValidada, postulacion, ct);
     }
 }
