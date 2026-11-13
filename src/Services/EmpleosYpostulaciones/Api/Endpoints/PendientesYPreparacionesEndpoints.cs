@@ -72,6 +72,15 @@ public static class PendientesYPreparacionesEndpoints
             return Results.Ok(resultado);
         });
 
+        grupo.MapGet("/preparaciones/{id:guid}/comparacion-cv-ia", async (
+            Guid id, ClaimsPrincipal usuario, RevisionCvIAService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var resultado = await servicio.CompararAsync(usuarioId, id, ct);
+            return resultado is null ? Results.NotFound() : Results.Ok(resultado);
+        });
+
         // Aprobar cambios de CV NO es postular. Solo el modo Automatico puede
         // continuar el envio sin una segunda aprobacion.
         grupo.MapPost("/preparaciones/{id:guid}/aprobar-cv-ia", async (

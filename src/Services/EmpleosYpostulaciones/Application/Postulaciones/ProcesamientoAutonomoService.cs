@@ -19,6 +19,16 @@ public sealed class ProcesamientoAutonomoService(
         return (inicio, inicio.AddDays(1));
     }
 
+    public static (DateTime Inicio, DateTime Fin) DiaLocalUtc(DateTime ahoraUtc, string? zonaHoraria)
+    {
+        var zona = TimeZoneInfo.FindSystemTimeZoneById(
+            string.IsNullOrWhiteSpace(zonaHoraria) ? "America/Argentina/Buenos_Aires" : zonaHoraria);
+        var local = TimeZoneInfo.ConvertTimeFromUtc(ahoraUtc, zona);
+        var inicioLocal = DateTime.SpecifyKind(local.Date, DateTimeKind.Unspecified);
+        return (TimeZoneInfo.ConvertTimeToUtc(inicioLocal, zona),
+            TimeZoneInfo.ConvertTimeToUtc(inicioLocal.AddDays(1), zona));
+    }
+
     public static bool Permitido(string? modo) => modo is "Automatica" or "Asistida";
     public static bool EnvioSinAprobacionPermitido(string? modo) => modo == "Automatica";
 
@@ -35,13 +45,13 @@ public sealed class ProcesamientoAutonomoService(
         // Nunca reservar trabajo si no existe el adaptador real del agente.
         if (!preparador.Disponible) return 0;
         var ahora = DateTime.UtcNow;
-        var (inicio, fin) = DiaUtc(ahora);
         var completadas = 0;
         foreach (var usuarioId in await registro.UsuariosConPendientesAsync(ct))
         {
             ct.ThrowIfCancellationRequested();
             var config = await consultas.ConfiguracionAsync(usuarioId, ct);
             if (config is null || !Permitido(config.Modo)) continue;
+            var (inicio, fin) = DiaLocalUtc(DateTime.UtcNow, config.ZonaHoraria);
             if (config.LimiteDiario is < 1 or > 10 || config.CompatibilidadMinima is < 1 or > 100)
                 continue;
             if (await registro.CupoConsumidoAsync(usuarioId, inicio, fin, ct) >= config.LimiteDiario)
@@ -116,9 +126,16 @@ public sealed class ProcesamientoAutonomoService(
                     if (config.Modo == "Asistida")
                     {
                         // Propuesta terminada: consume un cupo del dia, IA libre.
-                        actual.ContabilizadaEnCupo = true;
-                        actual.FechaContabilizacionUtc = DateTime.UtcNow;
                         await registro.GuardarPreparacionAsync(actual, ct);
+                        var registrado = await registro.ReservarCupoPropuestaAsync(
+                            actual.Id, usuarioId, config.LimiteDiario, inicio, fin, ct);
+                        if (!registrado)
+                        {
+                            actual.Estado = EstadoPreparacionPostulacion.Fallida;
+                            actual.UltimoError = "LÃ­mite diario alcanzado durante la preparaciÃ³n asistida.";
+                            await registro.GuardarPreparacionAsync(actual, ct);
+                            break;
+                        }
                         await RegistrarSinBloquear(usuarioId, oferta.Id, actual.Id, "PropuestaLista", null, ct);
                         completadas++;
                         break;
@@ -138,8 +155,9 @@ public sealed class ProcesamientoAutonomoService(
                         new CrearPostulacionRequest(usuarioId, oferta.Id, cvId, actual.TextoPresentacion), ct);
                     postulacion.Origen = "Automatica";
                     // La escritura, el descuento del cupo y el cierre de preparacion son atomicos.
-                    await confirmacion.ConfirmarEnvioAsync(usuarioId, actual.Id,
-                        actual.VersionEdicion, postulacion, ct);
+                    await confirmacion.ConfirmarEnvioConCupoAsync(usuarioId, actual.Id,
+                        actual.VersionEdicion, postulacion, vigente.LimiteDiario,
+                        inicio, fin, ct);
                     await RegistrarSinBloquear(usuarioId, oferta.Id, actual.Id, "Completada", null, ct);
                     completadas++;
                 }

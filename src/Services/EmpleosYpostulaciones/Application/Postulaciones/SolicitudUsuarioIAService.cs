@@ -18,8 +18,34 @@ public sealed class SolicitudUsuarioIAService(
             throw new InvalidOperationException("La integracion del preparador IA no esta habilitada.");
         var configuracion = await consultas.ConfiguracionAsync(usuarioId, ct)
             ?? throw PostulacionException.DatosInvalidos();
-        var preparacion = await preparaciones.RegistrarInicioAsync(
-            usuarioId, empleoId, OrigenPreparacionPostulacion.SolicitudUsuario, ct);
+        // Si ya existe trabajo para esta oferta, devolverlo sin llamar otra vez a IA.
+        var existente = (await repositorio.ListarPreparacionesAsync(usuarioId, ct))
+            .Where(x => x.EmpleoId == empleoId && x.Estado is not (
+                EstadoPreparacionPostulacion.Cancelada or EstadoPreparacionPostulacion.Fallida or
+                EstadoPreparacionPostulacion.Enviada))
+            .OrderByDescending(x => x.FechaCreacion).FirstOrDefault();
+        if (existente is not null) return existente;
+        var validacion = await consultas.ValidarPerfilAsync(usuarioId, ct);
+        if (validacion?.PerfilCompleto != true)
+            throw PostulacionException.PerfilIncompleto(validacion?.Faltantes);
+        PreparacionPostulacion preparacion;
+        try
+        {
+            preparacion = await preparaciones.RegistrarInicioAsync(
+                usuarioId, empleoId, OrigenPreparacionPostulacion.SolicitudUsuario, ct);
+        }
+        catch (PostulacionException ex) when (ex.CodigoError is "PREPARACION_DUPLICADA" or "IA_OCUPADA")
+        {
+            // Otra peticiÃ³n pudo reservar esa misma oferta entre la consulta y el alta.
+            // Solo reutilizarla si es de esta oferta. Si la IA estÃ¡ en otra, rechazar.
+            var concurrente = (await repositorio.ListarPreparacionesAsync(usuarioId, ct))
+                .Where(x => x.EmpleoId == empleoId && x.Estado is not (
+                    EstadoPreparacionPostulacion.Cancelada or EstadoPreparacionPostulacion.Fallida or
+                    EstadoPreparacionPostulacion.Enviada))
+                .OrderByDescending(x => x.FechaCreacion).FirstOrDefault();
+            if (concurrente is null) throw;
+            return concurrente;
+        }
         preparacion.ModoEjecucion = configuracion.Modo ?? "Desactivada";
         try
         {

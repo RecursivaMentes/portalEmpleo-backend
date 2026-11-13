@@ -307,37 +307,89 @@ public class CvService(
     }
 
     /// <summary>Alta común: controla el límite y decide si el CV es el principal (el primero siempre lo es).</summary>
-    private async Task<Cv> AgregarCvAsync(
-        Guid usuarioId, string titulo, string? texto, bool pideSerPrincipal, string? claveArchivo,
-        CancellationToken cancellationToken)
+    private Task<Cv> AgregarCvAsync(Guid usuarioId, string titulo, string? texto,
+        bool pideSerPrincipal, string? claveArchivo, CancellationToken ct) =>
+        cvs.EjecutarExclusivoAsync(usuarioId,
+            () => AgregarCvCoreAsync(usuarioId, titulo, texto, pideSerPrincipal, claveArchivo, ct), ct);
+
+    // Este metodo se usa tanto en altas habituales como en propuestas IA aprobadas,
+    // siempre bajo la transaccion y el bloqueo por usuario de EjecutarExclusivoAsync.
+    private async Task<Cv> AgregarCvCoreAsync(Guid usuarioId, string titulo, string? texto,
+        bool pideSerPrincipal, string? claveArchivo, CancellationToken ct)
     {
+        var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, ct);
+        if (existentes.Count >= MaxCvsPorUsuario)
+            throw new ValidationException($"PodÃ©s tener hasta {MaxCvsPorUsuario} CV. EliminÃ¡ alguno para crear otro.");
+        var esPrincipal = pideSerPrincipal || existentes.Count == 0;
+        if (esPrincipal)
+        {
+            foreach (var existente in existentes) existente.EsPrincipal = false;
+            await cvs.GuardarCambiosAsync(ct);
+        }
+        var ahora = DateTime.UtcNow;
+        var cv = new Cv
+        {
+            Id = Guid.NewGuid(), UsuarioId = usuarioId, Titulo = titulo,
+            TextoPlano = texto, UrlArchivo = claveArchivo, EsPrincipal = esPrincipal,
+            Version = 1, FechaCreacion = ahora, FechaActualizacion = ahora,
+        };
+        await cvs.AgregarAsync(cv, ct);
+        await cvs.GuardarCambiosAsync(ct);
+        return cv;
+    }
+    public sealed record CvIAAplicado(Guid Id, long Version);
+
+    public async Task<CvIAAplicado?> AplicarPropuestaAprobadaAsync(
+        Guid usuarioId, Guid operacionId, bool crearNuevo, Guid? cvId,
+        long? versionOriginal, string? titulo, string texto, CancellationToken ct = default)
+    {
+        if (usuarioId == Guid.Empty || operacionId == Guid.Empty || string.IsNullOrWhiteSpace(texto))
+            throw new ValidationException("La operaciÃ³n y el texto del CV son obligatorios.");
+        if (crearNuevo && cvId.HasValue || !crearNuevo && (cvId is null || versionOriginal is null or < 1))
+            throw new ValidationException("La propuesta no identifica correctamente el CV original.");
+        if (!await UsuarioActivoAsync(usuarioId, ct)) return null;
+        var textoLimpio = ValidarTexto(texto)
+            ?? throw new ValidationException("El CV no puede quedar vacÃ­o.");
+        var tituloLimpio = crearNuevo ? ValidarTitulo(titulo) : null;
+        var solicitud = System.Text.Json.JsonSerializer.Serialize(new {
+            usuarioId, crearNuevo, cvId, versionOriginal, titulo = tituloLimpio, texto = textoLimpio
+        });
+        var huella = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(solicitud)));
+
         return await cvs.EjecutarExclusivoAsync(usuarioId, async () =>
         {
-            var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, cancellationToken);
-            if (existentes.Count >= MaxCvsPorUsuario)
-                throw new ValidationException(
-                    $"Podés tener hasta {MaxCvsPorUsuario} CV. Eliminá alguno para crear otro.");
-
-            var esPrincipal = pideSerPrincipal || existentes.Count == 0;
-            if (esPrincipal)
+            var anterior = await cvs.ObtenerOperacionCvIAAsync(operacionId, usuarioId, ct);
+            if (anterior is not null)
             {
-                foreach (var existente in existentes) existente.EsPrincipal = false;
-                await cvs.GuardarCambiosAsync(cancellationToken);
+                if (anterior.HuellaSolicitud != huella)
+                    throw new CvConflictoException("La operaciÃ³n de aprobaciÃ³n ya fue utilizada con otros datos.");
+                return new CvIAAplicado(anterior.CvId, anterior.VersionResultado);
             }
-
-            var ahora = DateTime.UtcNow;
-            var cv = new Cv
+            CvIAAplicado resultado;
+            if (crearNuevo)
             {
-                Id = Guid.NewGuid(), UsuarioId = usuarioId, Titulo = titulo,
-                TextoPlano = texto, UrlArchivo = claveArchivo, EsPrincipal = esPrincipal,
-                Version = 1, FechaCreacion = ahora, FechaActualizacion = ahora,
-            };
-            await cvs.AgregarAsync(cv, cancellationToken);
-            await cvs.GuardarCambiosAsync(cancellationToken);
-            return cv;
-        }, cancellationToken);
+                var creado = await AgregarCvCoreAsync(usuarioId, tituloLimpio!, textoLimpio,
+                    false, null, ct);
+                resultado = new CvIAAplicado(creado.Id, creado.Version);
+            }
+            else
+            {
+                var actualizado = await ActualizarCvCoreAsync(usuarioId, cvId!.Value,
+                    new ActualizarCvRequest(null, textoLimpio, null, versionOriginal!.Value), ct);
+                if (actualizado is null) return null;
+                resultado = new CvIAAplicado(actualizado.Id, actualizado.Version);
+            }
+            await cvs.RegistrarOperacionCvIAAsync(new OperacionCvIA
+            {
+                Id = operacionId, UsuarioId = usuarioId, CvId = resultado.Id,
+                VersionResultado = resultado.Version, HuellaSolicitud = huella,
+                FechaUtc = DateTime.UtcNow
+            }, ct);
+            await cvs.GuardarCambiosAsync(ct);
+            return resultado;
+        }, ct);
     }
-
     // La clave la genera siempre el servidor (nunca el nombre del cliente): no se puede escribir fuera de la carpeta
     // ni pisar el archivo de otra persona. Se guarda en Cv.UrlArchivo, que es una clave de almacenamiento, no una URL.
     private static void ComprobarVersion(Cv cv, long version)

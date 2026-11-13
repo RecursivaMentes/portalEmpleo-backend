@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Empresa> Empresas { get; set; }
     public DbSet<PerfilLaboral> PerfilesLaborales { get; set; }
     public DbSet<Cv> Cvs { get; set; }
+    public DbSet<OperacionCvIA> OperacionesCvIA { get; set; }
     public DbSet<Notificacion> Notificaciones { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

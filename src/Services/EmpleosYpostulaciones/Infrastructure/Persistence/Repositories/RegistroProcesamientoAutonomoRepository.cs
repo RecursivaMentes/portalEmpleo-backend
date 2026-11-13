@@ -17,6 +17,30 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : I
             x.ContabilizadaEnCupo && x.FechaContabilizacionUtc >= inicioUtc &&
             x.FechaContabilizacionUtc < finUtc, ct);
 
+    public async Task<bool> ReservarCupoPropuestaAsync(Guid preparacionId, Guid usuarioId,
+        int limite, DateTime inicioUtc, DateTime finUtc, CancellationToken ct = default)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
+        var prep = await db.PreparacionesPostulacion.FirstOrDefaultAsync(x =>
+            x.Id == preparacionId && x.UsuarioId == usuarioId, ct);
+        if (prep is null || prep.Estado != EstadoPreparacionPostulacion.PendienteAprobacion)
+            return false;
+        if (prep.ContabilizadaEnCupo) return true;
+        var cantidad = await db.PreparacionesPostulacion.AsNoTracking().CountAsync(x =>
+            x.UsuarioId == usuarioId && x.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
+            x.ContabilizadaEnCupo && x.FechaContabilizacionUtc >= inicioUtc &&
+            x.FechaContabilizacionUtc < finUtc, ct);
+        if (limite is < 1 or > 10 || cantidad >= limite) return false;
+        prep.ContabilizadaEnCupo = true;
+        prep.FechaContabilizacionUtc = DateTime.UtcNow;
+        prep.VersionEdicion++;
+        prep.FechaActualizacion = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return true;
+    }
+
     public Task<int> IntentosEnPeriodoAsync(Guid usuarioId, Guid empleoId, DateTime desdeUtc,
         CancellationToken ct = default) =>
         db.IntentosPostulacionIA.AsNoTracking().CountAsync(x =>
@@ -52,6 +76,11 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : I
         await db.SaveChangesAsync(ct);
     }
 
+    public Task<List<PreparacionPostulacion>> ObtenerCvEnAplicacionAsync(DateTime limiteUtc, CancellationToken ct = default) =>
+        db.PreparacionesPostulacion.AsNoTracking()
+            .Where(x => x.Estado == EstadoPreparacionPostulacion.AplicandoCv && x.FechaActualizacion < limiteUtc)
+            .ToListAsync(ct);
+
     public async Task<int> RecuperarInterrumpidasAsync(DateTime limiteUtc, CancellationToken ct = default)
     {
         // Solo recupera tareas que ya no recibieron actividad durante el plazo establecido.
@@ -63,8 +92,7 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : I
                 DateTime.UtcNow), ct);
         var fallidas = await db.PreparacionesPostulacion
             .Where(x => (x.Estado == EstadoPreparacionPostulacion.Preparando ||
-                         x.Estado == EstadoPreparacionPostulacion.EnModificacion ||
-                         x.Estado == EstadoPreparacionPostulacion.AplicandoCv) &&
+                         x.Estado == EstadoPreparacionPostulacion.EnModificacion) &&
                          x.FechaActualizacion < limiteUtc)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.Estado,
                 EstadoPreparacionPostulacion.Fallida).SetProperty(y => y.UltimoError,

@@ -53,7 +53,9 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
 
         var recuperada = raiz[ClaveConfiguracion]!.Deserialize<ConfiguracionPostulaciones>(OpcionesJson)
             ?? throw new JsonException("La configuracion guardada no es valida.");
-        return recuperada with { OrdenPendientes = recuperada.OrdenPendientes ?? "Prioridad" };
+        return recuperada with { OrdenPendientes = recuperada.OrdenPendientes ?? "Prioridad",
+            ZonaHoraria = string.IsNullOrWhiteSpace(recuperada.ZonaHoraria)
+                ? "America/Argentina/Buenos_Aires" : recuperada.ZonaHoraria };
     }
 
     private static ConfiguracionPostulaciones ValidarYNormalizar(
@@ -100,8 +102,12 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
             _ => throw new ValidationException("El orden debe ser Prioridad, Compatibilidad, FechaCierre, Antiguos o Recientes.")
         };
 
+        var zona = string.IsNullOrWhiteSpace(solicitud.ZonaHoraria)
+            ? "America/Argentina/Buenos_Aires" : solicitud.ZonaHoraria.Trim();
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(zona, out _))
+            throw new ValidationException("La zona horaria debe ser una zona IANA vÃ¡lida.");
         return new ConfiguracionPostulaciones(
-            modo, solicitud.CompatibilidadMinima, solicitud.LimiteDiario, normalizadas, orden);
+            modo, solicitud.CompatibilidadMinima, solicitud.LimiteDiario, normalizadas, orden, zona);
     }
 
     private static List<string> NormalizarLista(List<string>? valores, string nombre)

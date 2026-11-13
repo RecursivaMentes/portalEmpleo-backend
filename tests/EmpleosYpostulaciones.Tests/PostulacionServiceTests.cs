@@ -162,7 +162,8 @@ public class PostulacionServiceTests
         Assert.Equal(postulacion.Estado, resultado.Estado);
         Assert.Equal(postulacion.FechaPostulacion, resultado.FechaPostulacion);
         Assert.Null(typeof(PostulacionResponse).GetProperty(nameof(Postulacion.Observaciones)));
-        Assert.Null(typeof(PostulacionResponse).GetProperty(nameof(Postulacion.TextoPresentacion)));
+        Assert.Equal(postulacion.TextoPresentacion, resultado.TextoPresentacion);
+        Assert.Empty(resultado.Historial);
         Assert.Null(typeof(PostulacionResponse).GetProperty(nameof(Postulacion.HistorialEstadosJson)));
     }
 

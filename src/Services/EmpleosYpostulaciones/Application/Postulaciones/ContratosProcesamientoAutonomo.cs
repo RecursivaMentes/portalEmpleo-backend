@@ -9,7 +9,7 @@ public sealed record PreferenciasProcesamiento(
 
 public sealed record ConfiguracionProcesamiento(
     string? Modo, int CompatibilidadMinima, int LimiteDiario,
-    PreferenciasProcesamiento? Preferencias, string? OrdenPendientes);
+    PreferenciasProcesamiento? Preferencias, string? OrdenPendientes, string? ZonaHoraria = null);
 
 public interface IConsultasProcesamientoInterno
 {
@@ -51,4 +51,8 @@ public interface IRegistroProcesamientoAutonomo
     Task GuardarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default);
     Task RegistrarIntentoAsync(IntentoProcesamientoAutonomo intento, CancellationToken ct = default);
     Task<int> RecuperarInterrumpidasAsync(DateTime limiteUtc, CancellationToken ct = default);
+    Task<bool> ReservarCupoPropuestaAsync(Guid preparacionId, Guid usuarioId, int limite,
+        DateTime inicioUtc, DateTime finUtc, CancellationToken ct = default) =>
+        throw new NotSupportedException("El registro no implementa reserva de cupo.");
+    Task<List<PreparacionPostulacion>> ObtenerCvEnAplicacionAsync(DateTime limiteUtc, CancellationToken ct = default);
 }

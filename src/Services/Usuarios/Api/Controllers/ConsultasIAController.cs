@@ -17,7 +17,7 @@ public sealed class ConsultasIAController(
         AutenticacionInterna.Autorizar(Request, configuracion, "Chatbot") ||
         AutenticacionInterna.Autorizar(Request, configuracion, "EmpleosYpostulaciones");
 
-    public sealed record AplicarCvAprobadoRequest(bool CrearNuevo, Guid? CvId,
+    public sealed record AplicarCvAprobadoRequest(Guid OperacionId, bool CrearNuevo, Guid? CvId,
         long? Version, string? Titulo, string Texto);
 
     [HttpPost("cvs/aplicar-propuesta-aprobada")]
@@ -28,21 +28,14 @@ public sealed class ConsultasIAController(
             return Unauthorized();
         if (usuarioId == Guid.Empty || request is null || string.IsNullOrWhiteSpace(request.Texto))
             return BadRequest();
+        if (request.OperacionId == Guid.Empty) return BadRequest();
         try
         {
-            if (request.CrearNuevo)
-            {
-                if (request.CvId.HasValue || string.IsNullOrWhiteSpace(request.Titulo)) return BadRequest();
-                var cv = await cvs.CrearAsync(usuarioId,
-                    new CrearCvRequest(request.Titulo, request.Texto), ct);
-                return cv is null ? NotFound() : Ok(new { cv.Id, cv.Version });
-            }
-            if (request.CvId is not { } id || request.Version is null or < 1) return BadRequest();
-            var actualizado = await cvs.ActualizarAsync(usuarioId, id,
-                new ActualizarCvRequest(null, request.Texto, null, request.Version.Value), ct);
-            return actualizado is null ? NotFound() : Ok(new { actualizado.Id, actualizado.Version });
-        }
-        catch (System.ComponentModel.DataAnnotations.ValidationException ex)
+            var aplicado = await cvs.AplicarPropuestaAprobadaAsync(
+                usuarioId, request.OperacionId, request.CrearNuevo, request.CvId,
+                request.Version, request.Titulo, request.Texto, ct);
+            return aplicado is null ? NotFound() : Ok(aplicado);
+        }        catch (System.ComponentModel.DataAnnotations.ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }

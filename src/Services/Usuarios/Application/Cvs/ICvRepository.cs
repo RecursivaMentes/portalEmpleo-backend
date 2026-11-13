@@ -18,6 +18,8 @@ public interface ICvRepository
     Task<Cv?> ObtenerAsync(Guid cvId, Guid usuarioId, CancellationToken cancellationToken = default);
 
     Task AgregarAsync(Cv cv, CancellationToken cancellationToken = default);
+    Task<OperacionCvIA?> ObtenerOperacionCvIAAsync(Guid operacionId, Guid usuarioId, CancellationToken ct = default);
+    Task RegistrarOperacionCvIAAsync(OperacionCvIA operacion, CancellationToken ct = default);
 
     /// <summary>Ejecuta una operacion de CV con bloqueo por usuario sin espera (PostgreSQL NOWAIT).</summary>
     Task<T> EjecutarExclusivoAsync<T>(Guid usuarioId, Func<Task<T>> accion, CancellationToken cancellationToken = default);

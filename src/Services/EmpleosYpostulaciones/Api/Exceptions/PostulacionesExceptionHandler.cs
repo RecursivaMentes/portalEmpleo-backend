@@ -44,7 +44,7 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
         "OFERTA_NO_ENCONTRADA" or "CV_NO_ENCONTRADO" => StatusCodes.Status404NotFound,
         "OFERTA_NO_DISPONIBLE" or "OFERTA_FINALIZADA" or "PERFIL_INCOMPLETO" or "POSTULACION_DUPLICADA"
             or "PENDIENTE_DUPLICADO" or "PREPARACION_DUPLICADA" or "IA_OCUPADA" or "PREPARACION_NO_CANCELABLE"
-            or "PREPARACION_NO_EDITABLE" or "PREPARACION_DESACTUALIZADA" or "CAMBIOS_SIN_ACEPTAR"
+            or "PREPARACION_NO_EDITABLE" or "PREPARACION_DESACTUALIZADA" or "CAMBIOS_SIN_ACEPTAR" or "LIMITE_DIARIO_ALCANZADO" or "TRANSICION_ESTADO_INVALIDA"
             => StatusCodes.Status409Conflict,
         _ => StatusCodes.Status500InternalServerError
     };

@@ -7,7 +7,7 @@ namespace EmpleosYpostulaciones.Infrastructure.Persistence.Configurations;
 public sealed class PreparacionPostulacionConfiguration : IEntityTypeConfiguration<PreparacionPostulacion>
 {
     // En espera de aprobacion la IA ya esta libre; una propuesta sigue abierta para esa oferta.
-    public const string FiltroEjecucion = "\"Estado\" IN ('Preparando', 'EnModificacion', 'Enviando', 'CancelacionSolicitada')";
+    public const string FiltroEjecucion = "\"Estado\" IN ('Preparando', 'EnModificacion', 'AplicandoCv', 'Enviando', 'CancelacionSolicitada')";
     public const string FiltroNoFinalizada = "\"Estado\" IN ('Preparando', 'EnModificacion', 'PendienteAprobacionCv', 'AplicandoCv', 'PendienteAprobacion', 'Enviando', 'CancelacionSolicitada')";
 
     public void Configure(EntityTypeBuilder<PreparacionPostulacion> builder)

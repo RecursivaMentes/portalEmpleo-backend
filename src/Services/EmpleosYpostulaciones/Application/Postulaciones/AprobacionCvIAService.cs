@@ -20,18 +20,21 @@ public sealed class AprobacionCvIAService(
         var prep = await repositorio.ObtenerPreparacionAsync(id, usuarioId, ct);
         if (prep is null) return null;
         if (prep.VersionEdicion != versionVista ||
-            prep.Estado != EstadoPreparacionPostulacion.PendienteAprobacionCv ||
+            prep.Estado is not (EstadoPreparacionPostulacion.PendienteAprobacionCv or EstadoPreparacionPostulacion.AplicandoCv) ||
             string.IsNullOrWhiteSpace(prep.CvTextoIAPropuesto) || prep.CambiosPendientes)
             throw PostulacionException.PreparacionDesactualizada();
 
         // Reclamar la ejecucion de forma optimista: evita aceptar la misma version dos veces.
-        prep.Estado = EstadoPreparacionPostulacion.AplicandoCv;
-        prep.VersionEdicion++;
-        prep.FechaActualizacion = DateTime.UtcNow;
-        await repositorio.GuardarPreparacionAsync(prep, ct);
+        if (prep.Estado == EstadoPreparacionPostulacion.PendienteAprobacionCv)
+        {
+            prep.Estado = EstadoPreparacionPostulacion.AplicandoCv;
+            prep.VersionEdicion++;
+            prep.FechaActualizacion = DateTime.UtcNow;
+            await repositorio.GuardarPreparacionAsync(prep, ct);
+        }
         try
         {
-            var cv = await aplicacion.AplicarAsync(usuarioId, prep.CvId,
+            var cv = await aplicacion.AplicarAsync(prep.Id, usuarioId, prep.CvId,
                 prep.CvNuevoIAPropuesto, prep.CvTituloIAPropuesto, prep.CvTextoIAPropuesto,
                 prep.CvVersionIAOriginal, ct);
             prep.CvId = cv.Id;
@@ -39,18 +42,31 @@ public sealed class AprobacionCvIAService(
             prep.CvTituloIAPropuesto = null;
             prep.CvVersionIAOriginal = null;
             prep.CvNuevoIAPropuesto = false;
-            if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
-                prep.ModoEjecucion == "Asistida" && !prep.ContabilizadaEnCupo)
-            {
-                prep.ContabilizadaEnCupo = true;
-                prep.FechaContabilizacionUtc = DateTime.UtcNow;
-            }
+            // El cupo asistido se contabiliza con bloqueo en PostgreSQL DESPUES de
+            // resolver la aprobaciÃ³n, nunca antes de guardar el CV.
             prep.VersionEdicion++;
             prep.Estado = EstadoPreparacionPostulacion.PendienteAprobacion;
             prep.FechaActualizacion = DateTime.UtcNow;
             await repositorio.GuardarPreparacionAsync(prep, ct);
             // La aprobacion de CV NO autoriza envio en Asistida ni Desactivada.
             var config = await consultas.ConfiguracionAsync(usuarioId, ct);
+            if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
+                prep.ModoEjecucion == "Asistida" && !prep.ContabilizadaEnCupo)
+            {
+                var (i, f) = ProcesamientoAutonomoService.DiaLocalUtc(DateTime.UtcNow,
+                    config?.ZonaHoraria);
+                if (config is null || !await registro.ReservarCupoPropuestaAsync(prep.Id,
+                    usuarioId, config.LimiteDiario, i, f, ct))
+                {
+                    // El CV ya se aplicÃ³ correctamente. No declarar fallida ni
+                    // invalidar la preparaciÃ³n por el cupo; dejarla para revisiÃ³n.
+                    prep.Estado = EstadoPreparacionPostulacion.PendienteAprobacion;
+                    prep.UltimoError = "No se pudo contabilizar la propuesta asistida por el lÃ­mite diario.";
+                    prep.FechaActualizacion = DateTime.UtcNow;
+                    await repositorio.GuardarPreparacionAsync(prep, ct);
+                    return prep;
+                }
+            }
             if (config is null || !ProcesamientoAutonomoService.EnvioSinAprobacionPermitido(config.Modo)) return prep;
             // Una solicitud explicita no consume el limite diario, pero el procesamiento
             // iniciado por la IA debe revalidar cupo, compatibilidad y exclusiones.
@@ -58,7 +74,7 @@ public sealed class AprobacionCvIAService(
             {
                 if (config.LimiteDiario is < 1 or > 10 ||
                     config.CompatibilidadMinima is < 1 or > 100) return prep;
-                var (inicio, fin) = ProcesamientoAutonomoService.DiaUtc(DateTime.UtcNow);
+                var (inicio, fin) = ProcesamientoAutonomoService.DiaLocalUtc(DateTime.UtcNow, config.ZonaHoraria);
                 if (await registro.CupoConsumidoAsync(usuarioId, inicio, fin, ct)
                     >= config.LimiteDiario) return prep;
                 var pendientes = await ordenamiento.ListarInternoAsync(usuarioId, ct);
@@ -75,20 +91,37 @@ public sealed class AprobacionCvIAService(
                     cv.Id, prep.TextoPresentacion), ct);
             postulacion.Origen = prep.Origen == OrigenPreparacionPostulacion.IniciativaIA
                 ? "Automatica" : "SolicitudUsuario";
-            await confirmacion.ConfirmarEnvioAsync(usuarioId, prep.Id,
-                prep.VersionEdicion, postulacion, ct);
+            if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA)
+            {
+                var (i, f) = ProcesamientoAutonomoService.DiaLocalUtc(DateTime.UtcNow, config.ZonaHoraria);
+                await confirmacion.ConfirmarEnvioConCupoAsync(usuarioId, prep.Id,
+                    prep.VersionEdicion, postulacion, config.LimiteDiario, i, f, ct);
+            }
+            else
+                await confirmacion.ConfirmarEnvioAsync(usuarioId, prep.Id,
+                    prep.VersionEdicion, postulacion, ct);
             return prep;
         }
-        catch
+        catch (PostulacionException ex) when (ex.CodigoError is
+            "DATOS_INVALIDOS" or "CV_NO_ENCONTRADO" or "PREPARACION_DESACTUALIZADA")
         {
+            // Solo retroceder si Usuarios rechazÃ³ definitivamente la escritura.
+            // Si el CV ya fue aplicado y el conflicto ocurriÃ³ durante el envio,
+            // la preparaciÃ³n debe permanecer lista, nunca pedir otra aprobacion.
             if (prep.Estado == EstadoPreparacionPostulacion.AplicandoCv)
             {
                 prep.Estado = EstadoPreparacionPostulacion.PendienteAprobacionCv;
+                prep.UltimoError = ex.Message;
                 prep.VersionEdicion++;
                 prep.FechaActualizacion = DateTime.UtcNow;
                 await repositorio.GuardarPreparacionAsync(prep, CancellationToken.None);
             }
             throw;
         }
-    }
+        catch
+        {
+            // El resultado remoto puede haber quedado confirmado. NO retroceder ni
+            // repetir con otra operacion. El recuperador usa el mismo Id idempotente.
+            throw;
+        }    }
 }

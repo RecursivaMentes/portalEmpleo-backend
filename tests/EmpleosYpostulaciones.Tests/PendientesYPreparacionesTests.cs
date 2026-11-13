@@ -96,6 +96,18 @@ public sealed class PendientesYPreparacionesTests
     }
 
     [Fact]
+    public async Task AplicandoCv_MantieneOcupadaLaEjecucion()
+    {
+        var datos = new DatosFalsos();
+        var servicio = new PreparacionesService(datos,
+            new PostulacionesFalsas { Oferta = OfertaValida() });
+        var prep = await servicio.RegistrarInicioAsync(_usuario, _empleo,
+            OrigenPreparacionPostulacion.SolicitudUsuario);
+        prep.Estado = EstadoPreparacionPostulacion.AplicandoCv;
+        Assert.False((await servicio.DisponibilidadAsync(_usuario)).Disponible);
+    }
+
+    [Fact]
     public async Task CancelarPreparacionActiva_NoLaLiberaAntesDeDetenerTrabajador()
     {
         var datos = new DatosFalsos();
@@ -166,7 +178,7 @@ public sealed class PendientesYPreparacionesTests
         public Task<PreparacionPostulacion?> ObtenerActivaAsync(Guid usuarioId, CancellationToken ct = default) =>
             Task.FromResult(Preparaciones.FirstOrDefault(x => x.UsuarioId == usuarioId &&
                 x.Estado is EstadoPreparacionPostulacion.Preparando or EstadoPreparacionPostulacion.EnModificacion
-                    or EstadoPreparacionPostulacion.Enviando or EstadoPreparacionPostulacion.CancelacionSolicitada));
+                    or EstadoPreparacionPostulacion.AplicandoCv or EstadoPreparacionPostulacion.Enviando or EstadoPreparacionPostulacion.CancelacionSolicitada));
         public Task<bool> ExistePreparacionNoFinalizadaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
             Task.FromResult(Preparaciones.Any(x => x.UsuarioId == usuarioId && x.EmpleoId == empleoId &&
                 x.Estado is not (EstadoPreparacionPostulacion.Cancelada or EstadoPreparacionPostulacion.Enviada or EstadoPreparacionPostulacion.Fallida)));

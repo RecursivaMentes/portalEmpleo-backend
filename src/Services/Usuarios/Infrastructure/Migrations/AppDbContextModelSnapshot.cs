@@ -145,6 +145,36 @@ namespace Infrastructure.Migrations
                     b.ToTable("notificaciones", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.OperacionCvIA", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CvId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("HuellaSolicitud")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("VersionResultado")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("operaciones_cv_ia", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.PerfilLaboral", b =>
                 {
                     b.Property<Guid>("Id")

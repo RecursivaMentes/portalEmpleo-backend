@@ -298,7 +298,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("UsuarioId")
                         .IsUnique()
-                        .HasFilter("\"Estado\" IN ('Preparando', 'EnModificacion', 'Enviando', 'CancelacionSolicitada')");
+                        .HasFilter("\"Estado\" IN ('Preparando', 'EnModificacion', 'AplicandoCv', 'Enviando', 'CancelacionSolicitada')");
 
                     b.HasIndex("UsuarioId", "EmpleoId")
                         .IsUnique()

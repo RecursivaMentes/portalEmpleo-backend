@@ -11,11 +11,21 @@ public sealed record PostulacionResponse(
     EstadoPostulacion Estado,
     DateTime FechaPostulacion)
 {
+    public sealed record CambioEstado(string Estado, DateTime FechaUtc);
+    public IReadOnlyList<CambioEstado> Historial { get; init; } = [];
+    public string? TextoPresentacion { get; init; }
+
     public static PostulacionResponse DesdeEntidad(Postulacion postulacion) => new(
         postulacion.Id,
         postulacion.UsuarioId,
         postulacion.EmpleoId,
         postulacion.CvId,
         postulacion.Estado,
-        postulacion.FechaPostulacion);
+        postulacion.FechaPostulacion)
+    {
+        TextoPresentacion = postulacion.TextoPresentacion,
+        Historial = System.Text.Json.JsonSerializer.Deserialize<List<CambioEstado>>(
+            postulacion.HistorialEstadosJson,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)) ?? []
+    };
 }

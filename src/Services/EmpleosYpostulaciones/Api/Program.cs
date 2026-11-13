@@ -19,6 +19,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<EmpleoService>();
 builder.Services.AddScoped<PostulacionService>();
+builder.Services.AddScoped<SeguimientoPostulacionesService>();
 builder.Services.AddScoped<PendientesService>();
 builder.Services.AddScoped<PreparacionesService>();
 builder.Services.AddScoped<RevisionPreparacionesService>();
@@ -27,6 +28,7 @@ builder.Services.AddScoped<ProcesamientoAutonomoService>();
 builder.Services.AddScoped<SolicitudUsuarioIAService>();
 builder.Services.AddScoped<AprobacionCvIAService>();
 builder.Services.AddScoped<RevisionIAService>();
+builder.Services.AddScoped<RevisionCvIAService>();
 builder.Services.AddScoped<ConsultasAutonomasHttpClient>();
 builder.Services.AddScoped<IConsultasProcesamientoInterno>(s => s.GetRequiredService<ConsultasAutonomasHttpClient>());
 builder.Services.AddScoped<IDatosExternosOrdenamientoInterno>(s => s.GetRequiredService<ConsultasAutonomasHttpClient>());
@@ -50,6 +52,12 @@ builder.Services.AddHttpClient("RecomendacionesOrdenPendientes", client =>
     client.BaseAddress = new Uri((builder.Configuration["Services:Recomendaciones:BaseUrl"]
         ?? throw new InvalidOperationException("Falta Services:Recomendaciones:BaseUrl")).TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(10);
+});
+builder.Services.AddHttpClient<IConsultaCvParaCompararIA, ConsultaCvComparacionIAClient>(client =>
+{
+    client.BaseAddress = new Uri((builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl")).TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(15);
 });
 builder.Services.AddHttpClient<IAplicacionCvAprobado, AplicacionCvAprobadoClient>(client =>
 {

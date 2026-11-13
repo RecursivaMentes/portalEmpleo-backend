@@ -1,4 +1,6 @@
 using Application.Chats;
+using Application.Herramientas;
+using Chatbot.Infrastructure.Clients;
 using Application.Cvs;
 using Chatbot.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
@@ -58,6 +60,13 @@ builder.Services.AddHttpClient<Application.Herramientas.HerramientasEmpleos>(cli
         ?? throw new InvalidOperationException("Falta Servicios:Empleos:BaseUrl");
     client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(10);
+});
+builder.Services.AddHttpClient<IPostulacionesUsuarioClient, PostulacionesUsuarioClient>(client =>
+{
+    var url = builder.Configuration["Servicios:Empleos:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Servicios:Empleos:BaseUrl");
+    client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(150);
 });
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<GeneracionCvService>();

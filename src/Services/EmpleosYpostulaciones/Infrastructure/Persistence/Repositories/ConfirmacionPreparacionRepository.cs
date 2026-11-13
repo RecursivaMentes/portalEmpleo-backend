@@ -8,12 +8,27 @@ namespace EmpleosYpostulaciones.Infrastructure.Persistence.Repositories;
 
 public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfirmacionPreparacionRepository
 {
-    public async Task<Postulacion> ConfirmarEnvioAsync(Guid usuarioId, Guid preparacionId,
-        int versionValidada, Postulacion postulacion, CancellationToken ct = default)
+    public Task<Postulacion> ConfirmarEnvioAsync(Guid usuarioId, Guid preparacionId,
+        int versionValidada, Postulacion postulacion, CancellationToken ct = default) =>
+        ConfirmarCoreAsync(usuarioId, preparacionId, versionValidada, postulacion, null, ct);
+
+    public Task<Postulacion> ConfirmarEnvioConCupoAsync(Guid usuarioId, Guid preparacionId,
+        int versionValidada, Postulacion postulacion, int limite, DateTime inicioUtc,
+        DateTime finUtc, CancellationToken ct = default) =>
+        ConfirmarCoreAsync(usuarioId, preparacionId, versionValidada, postulacion,
+            new RestriccionCupo(limite, inicioUtc, finUtc), ct);
+
+    private sealed record RestriccionCupo(int Limite, DateTime InicioUtc, DateTime FinUtc);
+
+    private async Task<Postulacion> ConfirmarCoreAsync(Guid usuarioId, Guid preparacionId,
+        int versionValidada, Postulacion postulacion, RestriccionCupo? cupo, CancellationToken ct)
     {
         await using var transaccion = await db.Database.BeginTransactionAsync(ct);
         try
         {
+            if (cupo is not null)
+                await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
+            await BloqueoOfertaUsuario.TomarAsync(db, usuarioId, postulacion.EmpleoId, ct);
             // El servicio ya pudo consultar la entidad con seguimiento; evitamos usar su
             // copia en memoria al bloquear y releer el estado vigente en PostgreSQL.
             var seguimiento = db.ChangeTracker.Entries<PreparacionPostulacion>()
@@ -41,6 +56,15 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
             if (await db.Postulaciones.AnyAsync(x => x.UsuarioId == usuarioId && x.EmpleoId == prep.EmpleoId, ct))
                 throw PostulacionException.Duplicada();
 
+            if (cupo is not null && !prep.ContabilizadaEnCupo)
+            {
+                var gastados = await db.PreparacionesPostulacion.AsNoTracking().CountAsync(x =>
+                    x.UsuarioId == usuarioId && x.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
+                    x.ContabilizadaEnCupo && x.FechaContabilizacionUtc >= cupo.InicioUtc &&
+                    x.FechaContabilizacionUtc < cupo.FinUtc, ct);
+                if (cupo.Limite is < 1 or > 10 || gastados >= cupo.Limite)
+                    throw PostulacionException.LimiteDiarioAlcanzado();
+            }
             // Una transaccion: enviar, cerrar preparacion y quitar de pendientes.
             db.Postulaciones.Add(postulacion);
             prep.PostulacionId = postulacion.Id;

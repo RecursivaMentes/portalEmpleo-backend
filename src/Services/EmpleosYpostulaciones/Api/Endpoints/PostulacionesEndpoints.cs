@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using Application.Postulaciones;
+using Domain.Enums;
 
 namespace EmpleosYpostulaciones.Api.Endpoints;
 
 public static class PostulacionesEndpoints
 {
+    public sealed record CambioEstadoRequest(EstadoPostulacion Estado);
     public static void MapPostulacionesEndpoints(
         this WebApplication app)
     {
@@ -58,6 +60,25 @@ public static class PostulacionesEndpoints
                 usuarioAutenticado, cancellationToken);
 
             return Results.Ok(postulaciones);
+        });
+
+        grupo.MapGet("/empleos/{empleoId:guid}", async (Guid empleoId,
+            ClaimsPrincipal usuario, SeguimientoPostulacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var resultado = await servicio.VerPorOfertaAsync(empleoId, usuarioId, ct);
+            return resultado is null ? Results.NotFound() : Results.Ok(resultado);
+        });
+
+        grupo.MapPost("/{id:guid}/estado", async (Guid id,
+            CambioEstadoRequest request, ClaimsPrincipal usuario,
+            SeguimientoPostulacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var resultado = await servicio.CambiarAsync(id, usuarioId, request.Estado, ct);
+            return resultado is null ? Results.NotFound() : Results.Ok(resultado);
         });
 
         // Copia historica: un cambio posterior del CV original no altera el archivo enviado.

@@ -27,14 +27,39 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
 
     public async Task AgregarPendienteAsync(EmpleoPendiente pendiente, CancellationToken ct = default)
     {
-        db.EmpleosPendientes.Add(pendiente);
-        try { await db.SaveChangesAsync(ct); }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await BloqueoOfertaUsuario.TomarAsync(db, pendiente.UsuarioId, pendiente.EmpleoId, ct);
+            var oferta = await db.Empleos.FromSqlInterpolated(
+                $"SELECT * FROM empleos WHERE \"Id\" = {pendiente.EmpleoId} FOR UPDATE")
+                .SingleOrDefaultAsync(ct);
+            if (oferta is null) throw PostulacionException.OfertaNoEncontrada();
+            if (oferta.Estado != EstadoEmpleo.Publicado)
+                throw PostulacionException.OfertaNoDisponible();
+            if (oferta.FechaCierre.HasValue && oferta.FechaCierre.Value <= DateTime.UtcNow)
+                throw PostulacionException.OfertaFinalizada();
+            // Segundo control DENTRO del bloqueo: evita guardar un pendiente si
+            // otro hilo acaba de confirmar la postulacion desde cualquier pantalla.
+            if (await db.Postulaciones.AnyAsync(x =>
+                x.UsuarioId == pendiente.UsuarioId && x.EmpleoId == pendiente.EmpleoId, ct))
+                throw PostulacionException.Duplicada();
+            db.EmpleosPendientes.Add(pendiente);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
         catch (DbUpdateException ex) when (EsUnico(ex))
         {
+            await tx.RollbackAsync(ct);
+            db.Entry(pendiente).State = EntityState.Detached;
             throw PostulacionException.PendienteDuplicado();
         }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
     }
-
     public async Task EliminarPendienteAsync(EmpleoPendiente pendiente, CancellationToken ct = default)
     {
         db.EmpleosPendientes.Remove(pendiente);
@@ -53,6 +78,7 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             x => x.UsuarioId == usuarioId &&
                  (x.Estado == EstadoPreparacionPostulacion.Preparando ||
                   x.Estado == EstadoPreparacionPostulacion.EnModificacion ||
+                  x.Estado == EstadoPreparacionPostulacion.AplicandoCv ||
                   x.Estado == EstadoPreparacionPostulacion.Enviando ||
                   x.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada), ct);
 
@@ -78,7 +104,11 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
     public async Task GuardarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default)
     {
         // Preparacion consultada con seguimiento y filtrada por UsuarioId.
-        await db.SaveChangesAsync(ct);
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException ex) when (EsUnico(ex))
+        {
+            throw PostulacionException.IaOcupada();
+        }
     }
 
     private static bool EsUnico(DbUpdateException ex) =>

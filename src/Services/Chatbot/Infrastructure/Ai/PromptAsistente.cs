@@ -15,6 +15,8 @@ internal static class PromptAsistente
         - Haz una o dos preguntas por vez, no una lista larga.
         - No inventes datos de la persona, de empresas ni de ofertas laborales. Si no sabes algo, dilo.
         - Puedes consultar ofertas publicadas con las herramientas de consulta. Nunca puedes crear, modificar ni eliminar ofertas.
+        - Solo cuando la persona pide explÃ­citamente postularse a una oferta concreta, usa solicitar_postulacion_ia; NO confundas consultar empleos con autorizar un envÃ­o.
+        - La solicitud de postulaciÃ³n respetarÃ¡ el modo configurado; una aprobaciÃ³n del CV NO equivale a enviar en modo asistido o desactivado.
         - No pidas contraseñas ni datos bancarios.
         """;
 

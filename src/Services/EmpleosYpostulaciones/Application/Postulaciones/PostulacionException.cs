@@ -61,6 +61,10 @@ public sealed class PostulacionException : Exception
         new("SESION_NO_VALIDA", "La sesion no permite validar los datos externos.");
     public static PostulacionException OrdenamientoNoDisponible(Exception? ex = null) =>
         new("ORDENAMIENTO_NO_DISPONIBLE", "No se pudo consultar el ordenamiento de postulaciones.", ex);
+    public static PostulacionException LimiteDiarioAlcanzado() =>
+        new("LIMITE_DIARIO_ALCANZADO", "Se alcanzÃ³ el lÃ­mite diario de preparaciones o envÃ­os autÃ³nomos.");
+    public static PostulacionException EstadoInvalido() =>
+        new("TRANSICION_ESTADO_INVALIDA", "El cambio de estado solicitado no estÃ¡ permitido.");
     public static PostulacionException DatosExternosInvalidos() =>
         new("DATOS_EXTERNOS_INVALIDOS", "El servicio consultado devolvio datos invalidos.");
 }

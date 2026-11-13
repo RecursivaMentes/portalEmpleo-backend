@@ -16,9 +16,9 @@ public sealed record ConfiguracionPostulaciones(
     int CompatibilidadMinima,
     int LimiteDiario,
     PreferenciasLaborales? Preferencias,
-    string? OrdenPendientes = null)
+    string? OrdenPendientes = null, string ZonaHoraria = "America/Argentina/Buenos_Aires")
 {
     // El usuario no activa el procesamiento autonomo por omision.
     public static ConfiguracionPostulaciones Predeterminada() =>
-        new("Desactivada", 60, 5, PreferenciasLaborales.Vacias(), "Prioridad");
+        new("Desactivada", 60, 5, PreferenciasLaborales.Vacias(), "Prioridad", "America/Argentina/Buenos_Aires");
 }
