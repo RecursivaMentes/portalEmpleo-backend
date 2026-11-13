@@ -8,7 +8,7 @@ public sealed class PreparacionPostulacionConfiguration : IEntityTypeConfigurati
 {
     // En espera de aprobacion la IA ya esta libre; una propuesta sigue abierta para esa oferta.
     public const string FiltroEjecucion = "\"Estado\" IN ('Preparando', 'EnModificacion', 'Enviando', 'CancelacionSolicitada')";
-    public const string FiltroNoFinalizada = "\"Estado\" IN ('Preparando', 'EnModificacion', 'PendienteAprobacionCv', 'PendienteAprobacion', 'Enviando', 'CancelacionSolicitada')";
+    public const string FiltroNoFinalizada = "\"Estado\" IN ('Preparando', 'EnModificacion', 'PendienteAprobacionCv', 'AplicandoCv', 'PendienteAprobacion', 'Enviando', 'CancelacionSolicitada')";
 
     public void Configure(EntityTypeBuilder<PreparacionPostulacion> builder)
     {
@@ -21,6 +21,8 @@ public sealed class PreparacionPostulacionConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.UltimoError).HasMaxLength(500);
         builder.HasIndex(x => new { x.UsuarioId, x.FechaContabilizacionUtc });
         builder.Property(x => x.TextoPresentacionPropuesto).HasMaxLength(4000);
+        builder.Property(x => x.CvTextoIAPropuesto).HasMaxLength(50000);
+        builder.Property(x => x.CvTituloIAPropuesto).HasMaxLength(200);
         builder.Property(x => x.VersionEdicion).IsConcurrencyToken();
         builder.Property(x => x.FechaCreacion).IsRequired();
         builder.Property(x => x.FechaActualizacion).IsRequired();

@@ -20,6 +20,7 @@ public sealed class ProcesamientoAutonomoService(
     }
 
     public static bool Permitido(string? modo) => modo is "Automatica" or "Asistida";
+    public static bool EnvioSinAprobacionPermitido(string? modo) => modo == "Automatica";
 
     public static bool Excluida(Empleo oferta, IReadOnlyList<string>? exclusiones)
     {
@@ -94,6 +95,10 @@ public sealed class ProcesamientoAutonomoService(
                         throw PostulacionException.PresentacionInvalida();
                     if (resultado.CvId == Guid.Empty)
                         throw PostulacionException.CvNoEncontrado();
+                    actual.CvTextoIAPropuesto = resultado.CvTextoPropuesto;
+                    actual.CvTituloIAPropuesto = resultado.CvTituloPropuesto;
+                    actual.CvVersionIAOriginal = resultado.CvVersionOriginal;
+                    actual.CvNuevoIAPropuesto = resultado.CrearCvNuevo;
                     actual.CvId = resultado.CvId;
                     actual.TextoPresentacion = resultado.TextoPresentacion;
                     actual.Estado = resultado.RequiereAprobacionCv || !resultado.CvId.HasValue

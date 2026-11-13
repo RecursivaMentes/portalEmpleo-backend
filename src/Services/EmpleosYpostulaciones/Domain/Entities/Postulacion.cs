@@ -8,6 +8,9 @@ public class Postulacion
     public Guid UsuarioId { get; set; }
     public Guid EmpleoId { get; set; }
     public Guid CvId { get; set; }
+    public byte[]? CvDocumentoEnviado { get; set; }
+    public string? CvDocumentoMime { get; set; }
+    public string? CvDocumentoNombre { get; set; }
     // Manual, Automatica, Asistida o SolicitudUsuario.
     public string Origen { get; set; } = "Manual";
     public EstadoPostulacion Estado { get; set; } = EstadoPostulacion.Pendiente;

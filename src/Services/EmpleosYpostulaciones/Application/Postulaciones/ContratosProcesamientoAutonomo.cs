@@ -26,11 +26,15 @@ public interface IDatosExternosOrdenamientoInterno
 // El Commit 9 conectara Chatbot a este contrato. Una implementacion no configurada
 // NO debe iniciar preparaciones ni enviar postulaciones de prueba.
 public sealed record ResultadoPreparacionIA(Guid? CvId, string? TextoPresentacion,
-    bool RequiereAprobacionCv);
+    bool RequiereAprobacionCv, string? CvTextoPropuesto = null,
+    string? CvTituloPropuesto = null, long? CvVersionOriginal = null, bool CrearCvNuevo = false);
 public interface IPreparadorPostulacionesIA
 {
     bool Disponible { get; }
     Task<ResultadoPreparacionIA> PrepararAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default);
+    Task<ResultadoPreparacionIA> ModificarAsync(Guid usuarioId, Guid empleoId,
+        string instrucciones, Guid? cvAnterior, string? textoAnterior, CancellationToken ct = default) =>
+        throw new NotSupportedException("Este preparador no admite cambios solicitados por el usuario.");
 }
 
 public sealed record IntentoProcesamientoAutonomo(

@@ -20,6 +20,10 @@ public class PreparacionPostulacion
     public string? UltimoError { get; set; }
     // Borrador que NO cambia el CV ni la presentacion vigentes hasta la aceptacion.
     public Guid? CvIdPropuesto { get; set; }
+    public string? CvTextoIAPropuesto { get; set; }
+    public string? CvTituloIAPropuesto { get; set; }
+    public long? CvVersionIAOriginal { get; set; }
+    public bool CvNuevoIAPropuesto { get; set; }
     public string? TextoPresentacionPropuesto { get; set; }
     public bool CambiosPendientes { get; set; }
     // Proteccion ante dos aceptaciones/modificaciones concurrentes.

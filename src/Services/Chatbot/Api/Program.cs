@@ -39,6 +39,26 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHttpClient("UsuariosIA", client =>
+{
+    client.BaseAddress = new Uri((builder.Configuration["Servicios:Usuarios:BaseUrl"]
+        ?? "http://localhost:5078").TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddHttpClient("EmpleosIA", client =>
+{
+    var baseUrl = builder.Configuration["Servicios:Empleos:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Servicios:Empleos:BaseUrl");
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddHttpClient<Application.Herramientas.HerramientasEmpleos>(client =>
+{
+    var url = builder.Configuration["Servicios:Empleos:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Servicios:Empleos:BaseUrl");
+    client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<GeneracionCvService>();
 builder.Services.AddScoped<AnalisisCvService>();

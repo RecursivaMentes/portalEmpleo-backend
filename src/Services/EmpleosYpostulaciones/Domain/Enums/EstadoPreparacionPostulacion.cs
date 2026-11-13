@@ -5,6 +5,7 @@ public enum EstadoPreparacionPostulacion
     Preparando,
     EnModificacion,
     PendienteAprobacionCv,
+    AplicandoCv,
     PendienteAprobacion,
     Enviando,
     CancelacionSolicitada,

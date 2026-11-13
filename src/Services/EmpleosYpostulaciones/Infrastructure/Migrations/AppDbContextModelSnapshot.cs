@@ -150,6 +150,17 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<byte[]>("CvDocumentoEnviado")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("CvDocumentoMime")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("CvDocumentoNombre")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<Guid>("CvId")
                         .HasColumnType("uuid");
 
@@ -217,6 +228,20 @@ namespace Infrastructure.Migrations
                     b.Property<Guid?>("CvIdPropuesto")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("CvNuevoIAPropuesto")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CvTextoIAPropuesto")
+                        .HasMaxLength(50000)
+                        .HasColumnType("character varying(50000)");
+
+                    b.Property<string>("CvTituloIAPropuesto")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<long?>("CvVersionIAOriginal")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid>("EmpleoId")
                         .HasColumnType("uuid");
 
@@ -277,7 +302,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("UsuarioId", "EmpleoId")
                         .IsUnique()
-                        .HasFilter("\"Estado\" IN ('Preparando', 'EnModificacion', 'PendienteAprobacionCv', 'PendienteAprobacion', 'Enviando', 'CancelacionSolicitada')");
+                        .HasFilter("\"Estado\" IN ('Preparando', 'EnModificacion', 'PendienteAprobacionCv', 'AplicandoCv', 'PendienteAprobacion', 'Enviando', 'CancelacionSolicitada')");
 
                     b.HasIndex("UsuarioId", "FechaContabilizacionUtc");
 

@@ -63,7 +63,8 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : I
                 DateTime.UtcNow), ct);
         var fallidas = await db.PreparacionesPostulacion
             .Where(x => (x.Estado == EstadoPreparacionPostulacion.Preparando ||
-                         x.Estado == EstadoPreparacionPostulacion.EnModificacion) &&
+                         x.Estado == EstadoPreparacionPostulacion.EnModificacion ||
+                         x.Estado == EstadoPreparacionPostulacion.AplicandoCv) &&
                          x.FechaActualizacion < limiteUtc)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.Estado,
                 EstadoPreparacionPostulacion.Fallida).SetProperty(y => y.UltimoError,

@@ -4,7 +4,8 @@ using Domain.Enums;
 namespace Application.Postulaciones;
 
 public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation,
-    IPerfilLaboralValidationClient perfilValidation, IConsultasProcesamientoInterno? validacionInterna = null)
+    IPerfilLaboralValidationClient perfilValidation, IConsultasProcesamientoInterno? validacionInterna = null,
+    ICopiaHistoricaCv? copiaHistorica = null)
 {
     public async Task<Postulacion> CrearAsync(
         CrearPostulacionRequest request,
@@ -94,6 +95,15 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             })
         };
 
+        // Se adjunta la copia vigente ANTES de insertar Postulacion. Ningun envio sin documento.
+        // En tests antiguos el adaptador es opcional; en el host API se registra obligatoriamente.
+        if (copiaHistorica is not null)
+        {
+            var documento = await copiaHistorica.ObtenerAsync(request.UsuarioId, request.CvId, cancellationToken);
+            postulacion.CvDocumentoEnviado = documento.Contenido;
+            postulacion.CvDocumentoMime = documento.Mime;
+            postulacion.CvDocumentoNombre = documento.Nombre;
+        }
         return postulacion;
     }
     

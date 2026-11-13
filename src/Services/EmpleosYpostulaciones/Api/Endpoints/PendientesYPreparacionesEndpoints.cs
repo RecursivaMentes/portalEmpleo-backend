@@ -6,6 +6,7 @@ namespace EmpleosYpostulaciones.Api.Endpoints;
 public static class PendientesYPreparacionesEndpoints
 {
     public sealed record AgregarPendienteRequest(Guid EmpleoId);
+    public sealed record SolicitarCambiosIARequest(int VersionEdicion, string Instrucciones);
 
     private static string? Token(HttpRequest solicitud)
     {
@@ -55,6 +56,43 @@ public static class PendientesYPreparacionesEndpoints
                 return Results.Unauthorized();
             return await servicio.EliminarAsync(usuarioId, empleoId, ct)
                 ? Results.NoContent() : Results.NotFound();
+        });
+
+        // Una solicitud expresa no cambia el modo: solo Automatica habilita envio directo.
+        grupo.MapPost("/preparaciones/solicitar-con-ia", async (
+            AgregarPendienteRequest request, ClaimsPrincipal usuario,
+            IPreparadorPostulacionesIA preparador, SolicitudUsuarioIAService servicio,
+            CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            if (!preparador.Disponible) return Results.StatusCode(503);
+            if (request.EmpleoId == Guid.Empty) return Results.BadRequest();
+            var resultado = await servicio.SolicitarAsync(usuarioId, request.EmpleoId, ct);
+            return Results.Ok(resultado);
+        });
+
+        // Aprobar cambios de CV NO es postular. Solo el modo Automatico puede
+        // continuar el envio sin una segunda aprobacion.
+        grupo.MapPost("/preparaciones/{id:guid}/aprobar-cv-ia", async (
+            Guid id, ConfirmarRevisionRequest request, ClaimsPrincipal usuario,
+            AprobacionCvIAService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var resultado = await servicio.AprobarAsync(id, usuarioId, request.VersionEdicion, ct);
+            return resultado is null ? Results.NotFound() : Results.Ok(resultado);
+        });
+
+        grupo.MapPost("/preparaciones/{id:guid}/solicitar-cambios-ia", async (
+            Guid id, SolicitarCambiosIARequest request, ClaimsPrincipal usuario,
+            RevisionIAService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var resultado = await servicio.SolicitarCambiosAsync(usuarioId, id,
+                request.VersionEdicion, request.Instrucciones, ct);
+            return resultado is null ? Results.NotFound() : Results.Ok(resultado);
         });
 
         grupo.MapGet("/preparaciones/me", async (
