@@ -26,6 +26,11 @@ public interface IPostulacionRepository
         Guid postulacionId,
         CancellationToken cancellationToken = default);
 
+    // La copia historica se entrega al postulante o al propietario de la oferta.
+    Task<CopiaHistoricaCv?> ObtenerDocumentoEnviadoAsync(Guid postulacionId,
+        Guid actorId, CancellationToken ct = default) =>
+        throw new NotSupportedException("Consulta de documento historico no implementada.");
+
     Task<List<Postulacion>?> ObtenerPorOfertaParaEmpresaAsync(Guid empleoId,
         Guid propietarioOfertaId, CancellationToken ct = default) =>
         throw new NotSupportedException("El repositorio no implementa consulta de empresa.");

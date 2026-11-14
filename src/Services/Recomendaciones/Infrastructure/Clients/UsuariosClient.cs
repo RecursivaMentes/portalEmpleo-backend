@@ -7,7 +7,7 @@ using Recomendaciones.Infrastructure.Exceptions;
 
 namespace Recomendaciones.Infrastructure.Clients;
 
-public class UsuariosClient
+public class UsuariosClient : IUsuariosRecomendaciones
 {
     private readonly HttpClient _httpClient;
 

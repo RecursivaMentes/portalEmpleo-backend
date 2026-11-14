@@ -74,7 +74,12 @@ public sealed class ConsultasAutonomasHttpClient(IHttpClientFactory fabrica, ICo
         List<CompatibilidadInterna> resultados = [];
         if (respuesta.StatusCode != HttpStatusCode.NotFound)
         {
-            respuesta.EnsureSuccessStatusCode();
+            try { respuesta.EnsureSuccessStatusCode(); }
+            catch (HttpRequestException ex)
+            {
+                throw new ServicioDependienteException("Recomendaciones",
+                    "No fue posible consultar las compatibilidades.", ex);
+            }
             resultados = await respuesta.Content.ReadFromJsonAsync<List<CompatibilidadInterna>>(
                 cancellationToken: ct) ?? throw new System.Text.Json.JsonException("Compatibilidades vacias.");
         }

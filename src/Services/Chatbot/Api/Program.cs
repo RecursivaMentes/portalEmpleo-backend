@@ -1,4 +1,5 @@
 using Application.Chats;
+using Application.Postulaciones;
 using Application.Herramientas;
 using Chatbot.Infrastructure.Clients;
 using Application.Cvs;
@@ -54,20 +55,17 @@ builder.Services.AddHttpClient("EmpleosIA", client =>
     client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(15);
 });
-builder.Services.AddHttpClient<Application.Herramientas.HerramientasEmpleos>(client =>
+builder.Services.AddHttpClient<IConsultaEmpleosChat, ConsultaEmpleosChatHttpClient>(client =>
 {
     var url = builder.Configuration["Servicios:Empleos:BaseUrl"]
         ?? throw new InvalidOperationException("Falta Servicios:Empleos:BaseUrl");
     client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(10);
 });
-builder.Services.AddHttpClient<IPostulacionesUsuarioClient, PostulacionesUsuarioClient>(client =>
-{
-    var url = builder.Configuration["Servicios:Empleos:BaseUrl"]
-        ?? throw new InvalidOperationException("Falta Servicios:Empleos:BaseUrl");
-    client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
-    client.Timeout = TimeSpan.FromSeconds(150);
-});
+builder.Services.AddScoped<HerramientasEmpleos>();
+// Las postulaciones se inician desde la accion autenticada de la oferta, no desde el chat.
+builder.Services.AddScoped<IDatosPreparacionIA, DatosPreparacionIAHttpClient>();
+builder.Services.AddScoped<PreparacionPostulacionesIAService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<GeneracionCvService>();
 builder.Services.AddScoped<AnalisisCvService>();

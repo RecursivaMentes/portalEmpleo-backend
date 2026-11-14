@@ -14,7 +14,7 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             .Where(p => p.UsuarioId == usuarioId)
             .Join(db.Empleos.AsNoTracking(), p => p.EmpleoId, e => e.Id,
                 (p, e) => new OfertaPendienteDatos(p.UsuarioId, p.EmpleoId, p.FechaAgregado,
-                    e.Titulo, e.FechaCierre, e.Ubicacion, e.Modalidad, e.TipoContrato, e.SalarioMin))
+                    e.Titulo, e.FechaCierre, e.Ubicacion, e.Modalidad, e.TipoContrato, e.SalarioMin, e.Estado))
             .ToListAsync(ct);
 
     public Task<EmpleoPendiente?> ObtenerPendienteAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
@@ -91,13 +91,48 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
 
     public async Task AgregarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default)
     {
-        db.PreparacionesPostulacion.Add(preparacion);
-        try { await db.SaveChangesAsync(ct); }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            // El inicio de IA y la confirmacion manual comparten el MISMO bloqueo.
+            await BloqueoCupoPostulacion.TomarAsync(db, preparacion.UsuarioId, ct);
+            await BloqueoOfertaUsuario.TomarAsync(db, preparacion.UsuarioId, preparacion.EmpleoId, ct);
+            var iaActiva = await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p =>
+                p.UsuarioId == preparacion.UsuarioId &&
+                (p.Estado == EstadoPreparacionPostulacion.Preparando ||
+                 p.Estado == EstadoPreparacionPostulacion.EnModificacion ||
+                 p.Estado == EstadoPreparacionPostulacion.AplicandoCv ||
+                 p.Estado == EstadoPreparacionPostulacion.Enviando ||
+                 p.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada), ct);
+            if (iaActiva) throw PostulacionException.IaOcupada();
+            var oferta = await db.Empleos.FromSqlInterpolated(
+                $"SELECT * FROM empleos WHERE \"Id\" = {preparacion.EmpleoId} FOR UPDATE")
+                .SingleOrDefaultAsync(ct);
+            if (oferta is null) throw PostulacionException.OfertaNoEncontrada();
+            if (oferta.Estado != EstadoEmpleo.Publicado) throw PostulacionException.OfertaNoDisponible();
+            if (oferta.FechaCierre.HasValue && oferta.FechaCierre.Value <= DateTime.UtcNow)
+                throw PostulacionException.OfertaFinalizada();
+            if (await db.Postulaciones.AsNoTracking().AnyAsync(p =>
+                p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId, ct))
+                throw PostulacionException.Duplicada();
+            db.PreparacionesPostulacion.Add(preparacion);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
         catch (DbUpdateException ex) when (EsUnico(ex))
         {
-            // No dejar una entidad Added rastreada despues del intento rechazado.
+            await tx.RollbackAsync(ct);
             db.Entry(preparacion).State = EntityState.Detached;
-            throw PostulacionException.IaOcupada();
+            var restriccion = (ex.InnerException as PostgresException)?.ConstraintName ?? string.Empty;
+            throw restriccion.Contains("UsuarioId_EmpleoId", StringComparison.Ordinal)
+                ? PostulacionException.PreparacionDuplicada() : PostulacionException.IaOcupada();
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            if (db.Entry(preparacion).State == EntityState.Added)
+                db.Entry(preparacion).State = EntityState.Detached;
+            throw;
         }
     }
 

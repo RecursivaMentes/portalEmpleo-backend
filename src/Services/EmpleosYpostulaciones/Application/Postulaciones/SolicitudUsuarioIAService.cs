@@ -36,8 +36,8 @@ public sealed class SolicitudUsuarioIAService(
         }
         catch (PostulacionException ex) when (ex.CodigoError is "PREPARACION_DUPLICADA" or "IA_OCUPADA")
         {
-            // Otra peticiÃ³n pudo reservar esa misma oferta entre la consulta y el alta.
-            // Solo reutilizarla si es de esta oferta. Si la IA estÃ¡ en otra, rechazar.
+            // Otra petición pudo reservar esa misma oferta entre la consulta y el alta.
+            // Solo reutilizarla si es de esta oferta. Si la IA está en otra, rechazar.
             var concurrente = (await repositorio.ListarPreparacionesAsync(usuarioId, ct))
                 .Where(x => x.EmpleoId == empleoId && x.Estado is not (
                     EstadoPreparacionPostulacion.Cancelada or EstadoPreparacionPostulacion.Fallida or

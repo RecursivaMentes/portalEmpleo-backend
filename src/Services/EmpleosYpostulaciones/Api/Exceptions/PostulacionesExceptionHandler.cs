@@ -11,18 +11,22 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
         var (statusCode, mensaje, codigoError) = exception switch
         {
             PostulacionException ex => (EstadoHttp(ex.CodigoError), ex.Message, ex.CodigoError),
+            ServicioDependienteException ex =>
+                (StatusCodes.Status503ServiceUnavailable,
+                 $"El servicio {ex.Servicio} no pudo completar la operacion. Volve a intentarlo mas tarde.",
+                 ex.CodigoError),
             ArgumentException ex => (StatusCodes.Status400BadRequest, ex.Message, "DATOS_INVALIDOS"),
             Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException =>
                 (StatusCodes.Status409Conflict, "La preparacion fue modificada. Volve a cargarla.", "PREPARACION_DESACTUALIZADA"),
             KeyNotFoundException ex => (StatusCodes.Status404NotFound, ex.Message, "RECURSO_NO_ENCONTRADO"),
             HttpRequestException ex when ex.StatusCode == HttpStatusCode.Unauthorized
-                => (StatusCodes.Status401Unauthorized, "Usuarios rechazó la autenticación de esta solicitud.", "VALIDACION_NO_AUTORIZADA"),
+                => (StatusCodes.Status503ServiceUnavailable, "Un servicio interno rechazó la autenticación entre servicios.", "AUTENTICACION_INTERNA_RECHAZADA"),
             HttpRequestException ex when ex.StatusCode == HttpStatusCode.Forbidden
-                => (StatusCodes.Status403Forbidden, "Usuarios no autorizó la validación de esta solicitud.", "VALIDACION_PROHIBIDA"),
+                => (StatusCodes.Status503ServiceUnavailable, "Un servicio interno rechazó la autorización entre servicios.", "AUTORIZACION_INTERNA_RECHAZADA"),
             HttpRequestException
-                => (StatusCodes.Status503ServiceUnavailable, "No fue posible completar la validación con Usuarios.", "SERVICIO_USUARIOS_NO_DISPONIBLE"),
+                => (StatusCodes.Status503ServiceUnavailable, "No fue posible completar la comunicación con un servicio dependiente.", "SERVICIO_DEPENDIENTE_NO_DISPONIBLE"),
             TaskCanceledException when (!cancellationToken.IsCancellationRequested)
-                => (StatusCodes.Status503ServiceUnavailable, "La validación con Usuarios excedió el tiempo de espera.", "SERVICIO_USUARIOS_TIMEOUT"),
+                => (StatusCodes.Status503ServiceUnavailable, "Un servicio dependiente excedió el tiempo de espera.", "SERVICIO_DEPENDIENTE_TIMEOUT"),
             _ => (StatusCodes.Status500InternalServerError, "Ocurrió un error interno al procesar la solicitud.", "ERROR_INTERNO")
         };
 
@@ -32,7 +36,8 @@ public sealed class PostulacionesExceptionHandler(ILogger<PostulacionesException
             logger.LogWarning(exception, "Solicitud de EmpleosYpostulaciones rechazada con HTTP {StatusCode}", statusCode);
 
         context.Response.StatusCode = statusCode;
-        await context.Response.WriteAsJsonAsync(new { mensaje, codigo = statusCode, codigoError }, cancellationToken);
+        await context.Response.WriteAsJsonAsync(new { mensaje, codigo = statusCode,
+            codigoError, seguimientoId = context.TraceIdentifier }, cancellationToken);
         return true;
     }
 

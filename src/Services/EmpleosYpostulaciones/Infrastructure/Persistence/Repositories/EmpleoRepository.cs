@@ -7,13 +7,22 @@ namespace EmpleosYpostulaciones.Infrastructure.Persistence.Repositories;
 
 public class EmpleoRepository(AppDbContext db) : IEmpleoRepository
 {
+    public Task<OfertaParaIA?> ObtenerParaIaAsync(Guid empleoId, CancellationToken ct = default) =>
+        db.Empleos.AsNoTracking().Where(e => e.Id == empleoId &&
+            e.Estado == EstadoEmpleo.Publicado &&
+            (!e.FechaCierre.HasValue || e.FechaCierre > DateTime.UtcNow))
+        .Select(e => new OfertaParaIA(e.Id, e.Titulo, e.Descripcion, e.Requisitos,
+            e.Ubicacion, e.Modalidad, e.TipoContrato, e.FechaCierre))
+        .FirstOrDefaultAsync(ct);
+
     public async Task<List<EmpleoResultado>> BuscarPublicadosAsync(
         BuscarEmpleosFiltro filtros,
         CancellationToken cancellationToken = default)
     {
         IQueryable<Empleo> query = db.Empleos
             .AsNoTracking()
-            .Where(e => e.Estado == EstadoEmpleo.Publicado);
+            .Where(e => e.Estado == EstadoEmpleo.Publicado &&
+                (!e.FechaCierre.HasValue || e.FechaCierre > DateTime.UtcNow));
 
         if (!string.IsNullOrWhiteSpace(filtros.Busqueda))
         {

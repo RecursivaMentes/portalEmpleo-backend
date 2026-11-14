@@ -1,4 +1,5 @@
 using Recomendaciones.Api.Security;
+using Recomendaciones.Application.Services;
 using Recomendaciones.Infrastructure.Services;
 using Recomendaciones.Infrastructure.Clients;
 

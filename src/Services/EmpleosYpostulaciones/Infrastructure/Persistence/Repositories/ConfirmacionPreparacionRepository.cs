@@ -26,8 +26,8 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
         await using var transaccion = await db.Database.BeginTransactionAsync(ct);
         try
         {
-            if (cupo is not null)
-                await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
+            // Siempre serializar con envio manual, inicio IA y reserva del cupo.
+            await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
             await BloqueoOfertaUsuario.TomarAsync(db, usuarioId, postulacion.EmpleoId, ct);
             // El servicio ya pudo consultar la entidad con seguimiento; evitamos usar su
             // copia en memoria al bloquear y releer el estado vigente en PostgreSQL.

@@ -71,7 +71,9 @@ public class ChatsController(ChatService chatService) : ControllerBase
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new
             {
-                message = "El asistente no está disponible en este momento. Intenta nuevamente más tarde."
+                message = "El asistente no está disponible en este momento. Intenta nuevamente más tarde.",
+                codigoError = "IA_NO_DISPONIBLE",
+                seguimientoId = HttpContext.TraceIdentifier
             });
         }
     }

@@ -4,6 +4,14 @@ namespace Application.Postulaciones;
 
 public sealed class SeguimientoPostulacionesService(IPostulacionRepository repositorio)
 {
+    public Task<CopiaHistoricaCv?> ObtenerDocumentoEnviadoAsync(Guid postulacionId,
+        Guid actorId, CancellationToken ct = default)
+    {
+        if (postulacionId == Guid.Empty || actorId == Guid.Empty)
+            throw PostulacionException.DatosInvalidos();
+        return repositorio.ObtenerDocumentoEnviadoAsync(postulacionId, actorId, ct);
+    }
+
     public async Task<IReadOnlyList<PostulacionResponse>?> VerPorOfertaAsync(Guid ofertaId,
         Guid propietarioId, CancellationToken ct = default)
     {

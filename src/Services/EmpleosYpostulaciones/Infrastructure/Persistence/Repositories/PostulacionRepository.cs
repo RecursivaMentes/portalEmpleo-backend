@@ -34,7 +34,18 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         try
         {
+            // Misma llave global que toma el inicio de cualquier preparacion IA:
+            // evita que una postulacion manual se confirme mientras la IA trabaja.
+            await BloqueoCupoPostulacion.TomarAsync(db, postulacion.UsuarioId, ct);
             await BloqueoOfertaUsuario.TomarAsync(db, postulacion.UsuarioId, postulacion.EmpleoId, ct);
+            var iaActiva = await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p =>
+                p.UsuarioId == postulacion.UsuarioId &&
+                (p.Estado == EstadoPreparacionPostulacion.Preparando ||
+                 p.Estado == EstadoPreparacionPostulacion.EnModificacion ||
+                 p.Estado == EstadoPreparacionPostulacion.AplicandoCv ||
+                 p.Estado == EstadoPreparacionPostulacion.Enviando ||
+                 p.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada), ct);
+            if (iaActiva) throw PostulacionException.IaOcupada();
             // Las comprobaciones remotas ya se realizaron. Revalidar oferta local
             // en la misma transaccion, igual que la confirmacion asistida.
             var oferta = await db.Empleos.FromSqlInterpolated(
@@ -49,6 +60,19 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
             var pendiente = await db.EmpleosPendientes.FirstOrDefaultAsync(x =>
                 x.UsuarioId == postulacion.UsuarioId && x.EmpleoId == postulacion.EmpleoId, ct);
             if (pendiente is not null) db.EmpleosPendientes.Remove(pendiente);
+            // Si el usuario envio manualmente, sus borradores de ESA oferta quedan
+            // cerrados, sin tocar borradores de otras ofertas ni relanzar la IA.
+            var borradores = await db.PreparacionesPostulacion.Where(p =>
+                p.UsuarioId == postulacion.UsuarioId && p.EmpleoId == postulacion.EmpleoId &&
+                (p.Estado == EstadoPreparacionPostulacion.PendienteAprobacion ||
+                 p.Estado == EstadoPreparacionPostulacion.PendienteAprobacionCv)).ToListAsync(ct);
+            foreach (var borrador in borradores)
+            {
+                borrador.Estado = EstadoPreparacionPostulacion.Cancelada;
+                borrador.PostulacionId = postulacion.Id;
+                borrador.VersionEdicion++;
+                borrador.FechaActualizacion = DateTime.UtcNow;
+            }
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         }
@@ -91,25 +115,9 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
             .OrderByDescending(x => x.FechaPostulacion).ToListAsync(ct) : null;
     }
 
+    // Adaptador de compatibilidad: la regla de negocio vive en Domain.
     public static bool TransicionValida(EstadoPostulacion actual, EstadoPostulacion nuevo,
-        bool esPostulante)
-    {
-        if (actual == nuevo) return true;
-        if (esPostulante)
-            return nuevo == EstadoPostulacion.Retirada && actual is
-                EstadoPostulacion.Pendiente or EstadoPostulacion.EnRevision or EstadoPostulacion.Entrevista;
-        return (actual, nuevo) switch
-        {
-            (EstadoPostulacion.Pendiente, EstadoPostulacion.EnRevision) => true,
-            (EstadoPostulacion.Pendiente, EstadoPostulacion.Rechazada) => true,
-            (EstadoPostulacion.EnRevision, EstadoPostulacion.Entrevista) => true,
-            (EstadoPostulacion.EnRevision, EstadoPostulacion.Aceptada) => true,
-            (EstadoPostulacion.EnRevision, EstadoPostulacion.Rechazada) => true,
-            (EstadoPostulacion.Entrevista, EstadoPostulacion.Aceptada) => true,
-            (EstadoPostulacion.Entrevista, EstadoPostulacion.Rechazada) => true,
-            _ => false
-        };
-    }
+        bool esPostulante) => Domain.Rules.TransicionEstadoPostulacion.Permitida(actual, nuevo, esPostulante);
 
     public async Task<Postulacion?> CambiarEstadoAsync(Guid postulacionId, Guid actorId,
         EstadoPostulacion nuevo, CancellationToken ct = default)
@@ -147,6 +155,20 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
             throw;
         }
     }
+    public async Task<CopiaHistoricaCv?> ObtenerDocumentoEnviadoAsync(Guid postulacionId,
+        Guid actorId, CancellationToken ct = default)
+    {
+        var documento = await db.Postulaciones.AsNoTracking()
+            .Where(p => p.Id == postulacionId &&
+                (p.UsuarioId == actorId || p.Empleo.UsuarioId == actorId))
+            .Select(p => new { p.CvDocumentoEnviado, p.CvDocumentoMime, p.CvDocumentoNombre })
+            .FirstOrDefaultAsync(ct);
+        if (documento?.CvDocumentoEnviado is not { Length: > 0 } bytes) return null;
+        return new CopiaHistoricaCv(bytes,
+            documento.CvDocumentoMime ?? "application/pdf",
+            documento.CvDocumentoNombre ?? "cv-enviado.pdf");
+    }
+
     public Task<Postulacion?> ObtenerPorIdAsync(
         Guid postulacionId,
         CancellationToken cancellationToken = default)

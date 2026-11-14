@@ -43,7 +43,7 @@ public sealed class AprobacionCvIAService(
             prep.CvVersionIAOriginal = null;
             prep.CvNuevoIAPropuesto = false;
             // El cupo asistido se contabiliza con bloqueo en PostgreSQL DESPUES de
-            // resolver la aprobaciÃ³n, nunca antes de guardar el CV.
+            // resolver la aprobación, nunca antes de guardar el CV.
             prep.VersionEdicion++;
             prep.Estado = EstadoPreparacionPostulacion.PendienteAprobacion;
             prep.FechaActualizacion = DateTime.UtcNow;
@@ -58,10 +58,10 @@ public sealed class AprobacionCvIAService(
                 if (config is null || !await registro.ReservarCupoPropuestaAsync(prep.Id,
                     usuarioId, config.LimiteDiario, i, f, ct))
                 {
-                    // El CV ya se aplicÃ³ correctamente. No declarar fallida ni
-                    // invalidar la preparaciÃ³n por el cupo; dejarla para revisiÃ³n.
+                    // El CV ya se aplicó correctamente. No declarar fallida ni
+                    // invalidar la preparación por el cupo; dejarla para revisión.
                     prep.Estado = EstadoPreparacionPostulacion.PendienteAprobacion;
-                    prep.UltimoError = "No se pudo contabilizar la propuesta asistida por el lÃ­mite diario.";
+                    prep.UltimoError = "No se pudo contabilizar la propuesta asistida por el límite diario.";
                     prep.FechaActualizacion = DateTime.UtcNow;
                     await repositorio.GuardarPreparacionAsync(prep, ct);
                     return prep;
@@ -100,14 +100,14 @@ public sealed class AprobacionCvIAService(
             else
                 await confirmacion.ConfirmarEnvioAsync(usuarioId, prep.Id,
                     prep.VersionEdicion, postulacion, ct);
-            return prep;
+            return await repositorio.ObtenerPreparacionAsync(id, usuarioId, ct) ?? prep;
         }
         catch (PostulacionException ex) when (ex.CodigoError is
             "DATOS_INVALIDOS" or "CV_NO_ENCONTRADO" or "PREPARACION_DESACTUALIZADA")
         {
-            // Solo retroceder si Usuarios rechazÃ³ definitivamente la escritura.
-            // Si el CV ya fue aplicado y el conflicto ocurriÃ³ durante el envio,
-            // la preparaciÃ³n debe permanecer lista, nunca pedir otra aprobacion.
+            // Solo retroceder si Usuarios rechazó definitivamente la escritura.
+            // Si el CV ya fue aplicado y el conflicto ocurrió durante el envio,
+            // la preparación debe permanecer lista, nunca pedir otra aprobacion.
             if (prep.Estado == EstadoPreparacionPostulacion.AplicandoCv)
             {
                 prep.Estado = EstadoPreparacionPostulacion.PendienteAprobacionCv;

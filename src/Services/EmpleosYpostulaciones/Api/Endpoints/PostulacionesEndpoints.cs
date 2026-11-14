@@ -83,16 +83,14 @@ public static class PostulacionesEndpoints
 
         // Copia historica: un cambio posterior del CV original no altera el archivo enviado.
         grupo.MapGet("/{id:guid}/cv-enviado", async (Guid id, ClaimsPrincipal usuario,
-            EmpleosYpostulaciones.Infrastructure.AppDbContext db, CancellationToken ct) =>
+            SeguimientoPostulacionesService servicio, CancellationToken ct) =>
         {
             if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
                 return Results.Unauthorized();
-            var p = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
-                .FirstOrDefaultAsync(db.Postulaciones.AsQueryable().Where(x =>
-                    x.Id == id && x.UsuarioId == usuarioId), ct);
-            if (p?.CvDocumentoEnviado is null) return Results.NotFound();
-            return Results.File(p.CvDocumentoEnviado,
-                p.CvDocumentoMime ?? "application/pdf", p.CvDocumentoNombre ?? "cv-enviado.pdf");
+            // El servicio restringe el documento al postulante o al propietario de la oferta.
+            var archivo = await servicio.ObtenerDocumentoEnviadoAsync(id, usuarioId, ct);
+            return archivo is null ? Results.NotFound() :
+                Results.File(archivo.Contenido, archivo.Mime, archivo.Nombre);
         });
 
         // La ruta /{id:guid} evita conflictos con /me. Todo el grupo exige JWT.

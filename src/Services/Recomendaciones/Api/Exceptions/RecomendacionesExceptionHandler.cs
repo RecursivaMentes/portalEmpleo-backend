@@ -63,7 +63,11 @@ public class RecomendacionesExceptionHandler : IExceptionHandler
             new
             {
                 mensaje,
-                codigo = statusCode
+                codigo = statusCode,
+                codigoError = exception is ServicioExternoException fallo
+                    ? "SERVICIO_" + fallo.Servicio.ToUpperInvariant() + "_NO_DISPONIBLE"
+                    : "RECOMENDACIONES_ERROR",
+                seguimientoId = httpContext.TraceIdentifier
             },
             cancellationToken
         );

@@ -132,7 +132,7 @@ public sealed class ProcesamientoAutonomoService(
                         if (!registrado)
                         {
                             actual.Estado = EstadoPreparacionPostulacion.Fallida;
-                            actual.UltimoError = "LÃ­mite diario alcanzado durante la preparaciÃ³n asistida.";
+                            actual.UltimoError = "Límite diario alcanzado durante la preparación asistida.";
                             await registro.GuardarPreparacionAsync(actual, ct);
                             break;
                         }
@@ -144,10 +144,32 @@ public sealed class ProcesamientoAutonomoService(
                     // Revalidar configuracion y cupo ANTES del envio automatico.
                     var vigente = await consultas.ConfiguracionAsync(usuarioId, ct);
                     if (vigente is null || vigente.Modo != "Automatica" ||
+                        vigente.LimiteDiario is < 1 or > 10 ||
+                        vigente.CompatibilidadMinima is < 1 or > 100 ||
                         await registro.CupoConsumidoAsync(usuarioId, inicio, fin, ct) >= vigente.LimiteDiario)
                     {
+                        actual.UltimoError = "El modo, la configuracion o el cupo cambio antes del envio.";
+                        await registro.GuardarPreparacionAsync(actual, ct);
                         await RegistrarSinBloquear(usuarioId, oferta.Id, actual.Id, "PendienteRevision",
-                            "El modo o cupo cambio antes del envio.", ct);
+                            actual.UltimoError, ct);
+                        break;
+                    }
+                    // Una preferencia, exclusion o puntuacion puede cambiar mientras la IA prepara.
+                    // En tal caso, se conserva el borrador y NO se envia automaticamente.
+                    var ofertaVigente = await registro.ObtenerOfertaAsync(oferta.Id, ct);
+                    var rankingVigente = await ordenamiento.ListarInternoAsync(usuarioId, ct);
+                    var candidatoVigente = rankingVigente.FirstOrDefault(x => x.EmpleoId == oferta.Id);
+                    if (ofertaVigente is null ||
+                        ofertaVigente.Estado != EstadoEmpleo.Publicado ||
+                        ofertaVigente.FechaCierre is { } cierre && cierre <= DateTime.UtcNow ||
+                        ProcesamientoAutonomoService.Excluida(ofertaVigente, vigente.Preferencias?.Exclusiones) ||
+                        candidatoVigente?.Compatibilidad is not { } scoreVigente ||
+                        scoreVigente < vigente.CompatibilidadMinima)
+                    {
+                        actual.UltimoError = "La oferta, compatibilidad o preferencias ya no cumplen los criterios del usuario.";
+                        await registro.GuardarPreparacionAsync(actual, ct);
+                        await RegistrarSinBloquear(usuarioId, oferta.Id, actual.Id, "PendienteRevision",
+                            actual.UltimoError, ct);
                         break;
                     }
                     if (actual.CvId is not { } cvId) break;

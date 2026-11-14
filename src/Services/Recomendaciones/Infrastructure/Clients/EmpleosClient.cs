@@ -5,7 +5,7 @@ using Recomendaciones.Infrastructure.Exceptions;
 
 namespace Recomendaciones.Infrastructure.Clients;
 
-public class EmpleosClient
+public class EmpleosClient : IEmpleosRecomendaciones
 {
     private readonly HttpClient _httpClient;
 

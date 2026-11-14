@@ -47,7 +47,7 @@ builder.Services.AddScoped<CompatibilidadService>();
 builder.Services.AddScoped<AnalisisOfertasService>();
 builder.Services.AddScoped<RecomendacionesService>();
 
-builder.Services.AddHttpClient<UsuariosClient>(client =>
+builder.Services.AddHttpClient<Recomendaciones.Application.Integrations.IUsuariosRecomendaciones, UsuariosClient>(client =>
 {
     var url = builder.Configuration["Microservices:UsuariosUrl"]
         ?? throw new InvalidOperationException(
@@ -57,7 +57,7 @@ builder.Services.AddHttpClient<UsuariosClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
-builder.Services.AddHttpClient<EmpleosClient>(client =>
+builder.Services.AddHttpClient<Recomendaciones.Application.Integrations.IEmpleosRecomendaciones, EmpleosClient>(client =>
 {
     var url = builder.Configuration["Microservices:EmpleosUrl"]
         ?? throw new InvalidOperationException(

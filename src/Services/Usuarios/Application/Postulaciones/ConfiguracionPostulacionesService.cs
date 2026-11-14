@@ -105,7 +105,7 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
         var zona = string.IsNullOrWhiteSpace(solicitud.ZonaHoraria)
             ? "America/Argentina/Buenos_Aires" : solicitud.ZonaHoraria.Trim();
         if (!TimeZoneInfo.TryFindSystemTimeZoneById(zona, out _))
-            throw new ValidationException("La zona horaria debe ser una zona IANA vÃ¡lida.");
+            throw new ValidationException("La zona horaria debe ser una zona IANA válida.");
         return new ConfiguracionPostulaciones(
             modo, solicitud.CompatibilidadMinima, solicitud.LimiteDiario, normalizadas, orden, zona);
     }

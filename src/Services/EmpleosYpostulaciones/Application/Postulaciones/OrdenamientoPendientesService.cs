@@ -6,7 +6,8 @@ namespace Application.Postulaciones;
 public sealed record OfertaPendienteDatos(
     Guid UsuarioId, Guid EmpleoId, DateTime FechaAgregado,
     string Titulo, DateTime? FechaCierre, string? Ubicacion,
-    ModalidadTrabajo Modalidad, TipoContrato TipoContrato, decimal? SalarioMin);
+    ModalidadTrabajo Modalidad, TipoContrato TipoContrato, decimal? SalarioMin,
+    EstadoEmpleo Estado = EstadoEmpleo.Publicado);
 
 public sealed record PreferenciasParaPrioridad(
     List<string>? PuestosInteres,
@@ -23,7 +24,11 @@ public sealed record DatosExternosOrdenamiento(
 public sealed record PendienteOrdenadoResponse(
     Guid UsuarioId, Guid EmpleoId, DateTime FechaAgregado,
     string Titulo, DateTime? FechaCierre,
-    int Prioridad, decimal? Compatibilidad);
+    int Prioridad, decimal? Compatibilidad)
+{
+    public bool Disponible { get; init; } = true;
+    public string? MotivoNoDisponible { get; init; }
+}
 
 public interface IOrdenamientoPendientesRepository
 {
@@ -71,9 +76,17 @@ public sealed class OrdenamientoPendientesService(
             var preferencias = PuntuarPreferencias(oferta, datos.Preferencias);
             var prioridad = CalcularPrioridad(compatibilidad, oferta.FechaCierre, preferencias,
                 oferta.FechaAgregado, ahora);
+            var motivo = oferta.Estado != EstadoEmpleo.Publicado
+                ? "La oferta ya no esta publicada."
+                : oferta.FechaCierre is { } cierre && cierre <= ahora
+                    ? "La oferta vencio y ya no acepta postulaciones." : null;
             return new PendienteOrdenadoResponse(
                 oferta.UsuarioId, oferta.EmpleoId, oferta.FechaAgregado,
-                oferta.Titulo, oferta.FechaCierre, prioridad, compatibilidad);
+                oferta.Titulo, oferta.FechaCierre, prioridad, compatibilidad)
+            {
+                Disponible = motivo is null,
+                MotivoNoDisponible = motivo
+            };
         }).ToList();
 
         // Desempates entre criterios funcionales; sin usar el Id como prioridad.

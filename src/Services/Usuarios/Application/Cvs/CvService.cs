@@ -319,7 +319,7 @@ public class CvService(
     {
         var existentes = await cvs.ListarPorUsuarioAsync(usuarioId, ct);
         if (existentes.Count >= MaxCvsPorUsuario)
-            throw new ValidationException($"PodÃ©s tener hasta {MaxCvsPorUsuario} CV. EliminÃ¡ alguno para crear otro.");
+            throw new ValidationException($"Podés tener hasta {MaxCvsPorUsuario} CV. Eliminá alguno para crear otro.");
         var esPrincipal = pideSerPrincipal || existentes.Count == 0;
         if (esPrincipal)
         {
@@ -344,12 +344,12 @@ public class CvService(
         long? versionOriginal, string? titulo, string texto, CancellationToken ct = default)
     {
         if (usuarioId == Guid.Empty || operacionId == Guid.Empty || string.IsNullOrWhiteSpace(texto))
-            throw new ValidationException("La operaciÃ³n y el texto del CV son obligatorios.");
+            throw new ValidationException("La operación y el texto del CV son obligatorios.");
         if (crearNuevo && cvId.HasValue || !crearNuevo && (cvId is null || versionOriginal is null or < 1))
             throw new ValidationException("La propuesta no identifica correctamente el CV original.");
         if (!await UsuarioActivoAsync(usuarioId, ct)) return null;
         var textoLimpio = ValidarTexto(texto)
-            ?? throw new ValidationException("El CV no puede quedar vacÃ­o.");
+            ?? throw new ValidationException("El CV no puede quedar vacío.");
         var tituloLimpio = crearNuevo ? ValidarTitulo(titulo) : null;
         var solicitud = System.Text.Json.JsonSerializer.Serialize(new {
             usuarioId, crearNuevo, cvId, versionOriginal, titulo = tituloLimpio, texto = textoLimpio
@@ -363,7 +363,7 @@ public class CvService(
             if (anterior is not null)
             {
                 if (anterior.HuellaSolicitud != huella)
-                    throw new CvConflictoException("La operaciÃ³n de aprobaciÃ³n ya fue utilizada con otros datos.");
+                    throw new CvConflictoException("La operación de aprobación ya fue utilizada con otros datos.");
                 return new CvIAAplicado(anterior.CvId, anterior.VersionResultado);
             }
             CvIAAplicado resultado;

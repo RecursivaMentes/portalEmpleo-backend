@@ -2,8 +2,14 @@ using System.Text.Json;
 
 namespace Application.Herramientas;
 
+// Application conoce la operacion de consulta, nunca HttpClient ni el servidor remoto.
+public interface IConsultaEmpleosChat
+{
+    Task<string> ConsultarAsync(string filtro, Guid? empleoId, CancellationToken ct = default);
+}
+
 // Solo consultas: no existen herramientas para crear, editar, cerrar o eliminar empleos.
-public sealed class HerramientasEmpleos(HttpClient http) : IEjecutorHerramientas
+public sealed class HerramientasEmpleos(IConsultaEmpleosChat consultas) : IEjecutorHerramientas
 {
     public IReadOnlyList<DefinicionHerramienta> Definiciones { get; } =
     [
@@ -21,7 +27,6 @@ public sealed class HerramientasEmpleos(HttpClient http) : IEjecutorHerramientas
                 ? "{}" : llamada.ArgumentosJson);
             if (args.RootElement.ValueKind != JsonValueKind.Object)
                 return new ResultadoHerramienta("Argumentos invalidos.", true);
-            var ruta = "/api/empleos";
             if (llamada.Nombre == "buscar_empleos")
             {
                 if (args.RootElement.TryGetProperty("texto", out var valor) &&
@@ -29,7 +34,7 @@ public sealed class HerramientasEmpleos(HttpClient http) : IEjecutorHerramientas
                 {
                     var busqueda = valor.GetString()!.Trim();
                     if (busqueda.Length > 120) return new ResultadoHerramienta("Buscador demasiado largo.", true);
-                    ruta += "?busqueda=" + Uri.EscapeDataString(busqueda);
+                    // El adaptador de Infrastructure construira la ruta remota.
                 }
             }
             else if (llamada.Nombre == "ver_empleo")
@@ -37,7 +42,7 @@ public sealed class HerramientasEmpleos(HttpClient http) : IEjecutorHerramientas
                 if (!args.RootElement.TryGetProperty("empleo_id", out var valor) ||
                     valor.ValueKind != JsonValueKind.String || !Guid.TryParse(valor.GetString(), out var id))
                     return new ResultadoHerramienta("empleo_id invalido.", true);
-                var json = await http.GetStringAsync(ruta, ct);
+                var json = await consultas.ConsultarAsync(string.Empty, id, ct);
                 using var doc = JsonDocument.Parse(json);
                 var encontrado = doc.RootElement.EnumerateArray().FirstOrDefault(x =>
                     x.TryGetProperty("id", out var p) && p.GetGuid() == id);
@@ -47,10 +52,10 @@ public sealed class HerramientasEmpleos(HttpClient http) : IEjecutorHerramientas
             }
             else return new ResultadoHerramienta("Herramienta desconocida.", true);
 
-            using var respuesta = await http.GetAsync(ruta, ct);
-            respuesta.EnsureSuccessStatusCode();
-            using var documento = await JsonDocument.ParseAsync(
-                await respuesta.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            var filtro = args.RootElement.TryGetProperty("texto", out var texto)
+                && texto.ValueKind == JsonValueKind.String ? texto.GetString() ?? string.Empty : string.Empty;
+            var contenido = await consultas.ConsultarAsync(filtro, null, ct);
+            using var documento = JsonDocument.Parse(contenido);
             if (documento.RootElement.ValueKind != JsonValueKind.Array)
                 return new ResultadoHerramienta("Respuesta de empleos invalida.", true);
             var elementos = documento.RootElement.EnumerateArray().Take(15)

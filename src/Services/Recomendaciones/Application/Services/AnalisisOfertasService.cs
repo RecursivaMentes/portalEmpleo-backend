@@ -1,18 +1,18 @@
 using Recomendaciones.Application.DTOs;
 using Recomendaciones.Application.Services;
-using Recomendaciones.Infrastructure.Clients;
+using Recomendaciones.Application.Integrations;
 
-namespace Recomendaciones.Infrastructure.Services;
+namespace Recomendaciones.Application.Services;
 
 public class AnalisisOfertasService
 {
-    private readonly UsuariosClient _usuariosClient;
-    private readonly EmpleosClient _empleosClient;
+    private readonly IUsuariosRecomendaciones _usuariosClient;
+    private readonly IEmpleosRecomendaciones _empleosClient;
     private readonly CompatibilidadService _compatibilidadService;
 
     public AnalisisOfertasService(
-        UsuariosClient usuariosClient,
-        EmpleosClient empleosClient,
+        IUsuariosRecomendaciones usuariosClient,
+        IEmpleosRecomendaciones empleosClient,
         CompatibilidadService compatibilidadService)
     {
         _usuariosClient = usuariosClient;
