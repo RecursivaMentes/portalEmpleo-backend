@@ -105,4 +105,36 @@ public class AuthService(
             usuario.PreferenciasJson,
             usuario.ReglasPostulacion);
     }
+
+    public async Task<bool> ChangePasswordAsync(
+        Guid userId,
+        ChangePasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await usuarios.GetByIdAsync(
+            userId,
+            cancellationToken);
+
+        if (user is null || !user.Estado)
+            return false;
+
+        if (!passwords.VerifyPassword(
+            user.PasswordHash,
+            request.CurrentPassword))
+            return false;
+
+        if (passwords.VerifyPassword(
+            user.PasswordHash,
+            request.NewPassword))
+            return false;
+
+        user.PasswordHash = passwords.HashPassword(
+            request.NewPassword);
+
+        await usuarios.UpdateAsync(
+            user,
+            cancellationToken);
+
+        return true;
+    }
 }

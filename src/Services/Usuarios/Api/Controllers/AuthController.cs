@@ -99,4 +99,73 @@ public class AuthController(AuthService authService) : ControllerBase
 
         return Ok(perfil);
     }
+
+    [Authorize]
+    [HttpPut("change-password")]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Token inválido."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(request.NewPassword) ||
+            string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        {
+            return BadRequest(new
+            {
+                message = "Todos los campos son obligatorios."
+            });
+        }
+
+        if (request.NewPassword != request.ConfirmPassword)
+        {
+            return BadRequest(new
+            {
+                message = "Las contraseñas nuevas no coinciden."
+            });
+        }
+
+        if (request.NewPassword.Length < 8)
+        {
+            return BadRequest(new
+            {
+                message = "La nueva contraseña debe tener al menos 8 caracteres."
+            });
+        }
+
+        if (request.CurrentPassword == request.NewPassword)
+        {
+            return BadRequest(new
+            {
+                message = "La nueva contraseña debe ser diferente a la actual."
+            });
+        }
+
+        var success = await authService.ChangePasswordAsync(
+            userId,
+            request,
+            cancellationToken);
+
+        if (!success)
+        {
+            return BadRequest(new
+            {
+                message = "No se pudo cambiar la contraseña. Verificá la contraseña actual y que la nueva sea diferente."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Contraseña actualizada correctamente."
+        });
+    }
 }
