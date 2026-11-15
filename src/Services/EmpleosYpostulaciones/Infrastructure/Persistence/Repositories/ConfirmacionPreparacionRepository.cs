@@ -12,22 +12,37 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
         int versionValidada, Postulacion postulacion, CancellationToken ct = default) =>
         ConfirmarCoreAsync(usuarioId, preparacionId, versionValidada, postulacion, null, ct);
 
+    public Task<Postulacion> ConfirmarEnvioAutomaticoAsync(Guid usuarioId, Guid preparacionId,
+        int versionValidada, Postulacion postulacion, CancellationToken ct = default) =>
+        ConfirmarCoreAsync(usuarioId, preparacionId, versionValidada, postulacion, null, ct, true);
+
     public Task<Postulacion> ConfirmarEnvioConCupoAsync(Guid usuarioId, Guid preparacionId,
         int versionValidada, Postulacion postulacion, int limite, DateTime inicioUtc,
         DateTime finUtc, CancellationToken ct = default) =>
         ConfirmarCoreAsync(usuarioId, preparacionId, versionValidada, postulacion,
-            new RestriccionCupo(limite, inicioUtc, finUtc), ct);
+            new RestriccionCupo(limite, inicioUtc, finUtc), ct, true);
 
     private sealed record RestriccionCupo(int Limite, DateTime InicioUtc, DateTime FinUtc);
 
     private async Task<Postulacion> ConfirmarCoreAsync(Guid usuarioId, Guid preparacionId,
-        int versionValidada, Postulacion postulacion, RestriccionCupo? cupo, CancellationToken ct)
+        int versionValidada, Postulacion postulacion, RestriccionCupo? cupo, CancellationToken ct,
+        bool automatico = false)
     {
         await using var transaccion = await db.Database.BeginTransactionAsync(ct);
         try
         {
             // Siempre serializar con envio manual, inicio IA y reserva del cupo.
             await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
+            if (await db.ReservasCambioUsuario.AsNoTracking().AnyAsync(x =>
+                x.UsuarioId == usuarioId && x.ExpiraUtc > DateTime.UtcNow, ct))
+                throw PostulacionException.CambioUsuarioEnCurso();
+            if (automatico)
+            {
+                var modoVigente = await db.ConfiguracionesOperativas.AsNoTracking()
+                    .Where(x => x.UsuarioId == usuarioId).Select(x => x.Modo).FirstOrDefaultAsync(ct);
+                if (modoVigente != "Automatica")
+                    throw PostulacionException.PreparacionDesactualizada();
+            }
             await BloqueoOfertaUsuario.TomarAsync(db, usuarioId, postulacion.EmpleoId, ct);
             // El servicio ya pudo consultar la entidad con seguimiento; evitamos usar su
             // copia en memoria al bloquear y releer el estado vigente en PostgreSQL.
@@ -43,6 +58,13 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
                 prep.CvId != postulacion.CvId || prep.TextoPresentacion != postulacion.TextoPresentacion ||
                 prep.EmpleoId != postulacion.EmpleoId || postulacion.UsuarioId != usuarioId)
                 throw PostulacionException.PreparacionDesactualizada();
+
+            // Protección adicional por si el pendiente fue retirado antes del envío:
+            // solo la iniciativa IA autónoma depende de esta cola.
+            if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
+                !await db.EmpleosPendientes.AsNoTracking().AnyAsync(p =>
+                    p.UsuarioId == usuarioId && p.EmpleoId == prep.EmpleoId, ct))
+                throw PostulacionException.PendienteRetirado();
 
             // Revalidacion LOCAL dentro de la transaccion; todas las validaciones remotas
             // de perfil y CV se completaron antes de abrirla.

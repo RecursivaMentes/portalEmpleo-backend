@@ -4,6 +4,11 @@ namespace Application.Postulaciones;
 
 public interface IConfirmacionPreparacionRepository
 {
+    // Sólo para envíos sin aprobación del usuario: revalida el modo en la transacción.
+    Task<Postulacion> ConfirmarEnvioAutomaticoAsync(Guid usuarioId, Guid preparacionId,
+        int versionValidada, Postulacion postulacion, CancellationToken ct = default) =>
+        ConfirmarEnvioAsync(usuarioId, preparacionId, versionValidada, postulacion, ct);
+
     // Revalida estado, version, oferta y duplicados dentro de una transaccion.
     Task<Postulacion> ConfirmarEnvioAsync(Guid usuarioId, Guid preparacionId,
         int versionValidada, Postulacion postulacion, CancellationToken ct = default);

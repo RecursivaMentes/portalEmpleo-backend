@@ -166,5 +166,6 @@ app.MapEmpleosEndpoints();
 app.MapConsultaOfertaIAEndpoints();
 app.MapPostulacionesEndpoints();
 app.MapPendientesYPreparacionesEndpoints();
+app.MapConfiguracionInternaEndpoints();
 
 app.Run();

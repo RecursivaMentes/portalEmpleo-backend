@@ -71,11 +71,26 @@ public sealed class ConsultasIAController(
         if (usuarioId == Guid.Empty || cvId == Guid.Empty) return BadRequest();
         // Si hay texto, el PDF generado es la version actual del CV.
         // Si no hay texto, se conserva el archivo original (PDF o Word).
-        Application.Cvs.ArchivoDescarga? archivo = null;
-        try { archivo = await cvs.GenerarDocumentoAsync(usuarioId, cvId, ct); }
-        catch (System.ComponentModel.DataAnnotations.ValidationException)
+        long? versionEsperada = null;
+        if (Request.Headers.IfMatch.Count > 0)
         {
-            archivo = await cvs.DescargarArchivoAsync(usuarioId, cvId, ct);
+            var valor = Request.Headers.IfMatch.ToString().Trim().Trim('"');
+            if (!long.TryParse(valor, out var v) || v < 1)
+                return BadRequest(new { message = "La versión del CV indicada no es válida." });
+            versionEsperada = v;
+        }
+        Application.Cvs.ArchivoDescarga? archivo = null;
+        try
+        {
+            try { archivo = await cvs.GenerarDocumentoConVersionAsync(usuarioId, cvId, versionEsperada, ct); }
+            catch (System.ComponentModel.DataAnnotations.ValidationException)
+            {
+                archivo = await cvs.DescargarArchivoConVersionAsync(usuarioId, cvId, versionEsperada, ct);
+            }
+        }
+        catch (CvConflictoException)
+        {
+            return Conflict(new { message = "El CV cambió mientras se preparaba la postulación. Revisá la versión actual." });
         }
         if (archivo is null) return NotFound();
         Response.Headers["X-Content-Type-Options"] = "nosniff";

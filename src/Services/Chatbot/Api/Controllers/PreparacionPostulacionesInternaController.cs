@@ -29,7 +29,19 @@ public sealed class PreparacionPostulacionesInternaController(
                 "DATOS_EXTERNOS_INVALIDOS" or "RESPUESTA_IA_INVALIDA" => 502,
                 _ => 500
             };
-            return StatusCode(estado, new { codigoError = ex.CodigoError, message = ex.Message });
+            var mensaje = ex.CodigoError switch
+            {
+                "DATOS_INVALIDOS" => "Revisá los datos de la solicitud.",
+                "CV_NO_ENCONTRADO" => "No encontramos el CV seleccionado.",
+                "OFERTA_NO_DISPONIBLE" => "La oferta ya no está disponible.",
+                "LIMITE_CVS" => "Alcanzaste el límite de CV que podés guardar.",
+                "PERFIL_NO_DISPONIBLE" => "Completá tu perfil laboral antes de continuar.",
+                "CVS_NO_DISPONIBLES" => "Necesitás tener al menos un CV disponible.",
+                "CONTENIDO_NO_FUNDAMENTADO" => "No pudimos preparar una propuesta con información verificada. Revisá tu perfil.",
+                _ => "No pudimos preparar la postulación. Volvé a intentarlo."
+            };
+            return StatusCode(estado, new { codigoError = ex.CodigoError, message = mensaje,
+                seguimientoId = HttpContext.TraceIdentifier });
         }
         catch (AsistenteNoDisponibleException)
         {
@@ -40,7 +52,7 @@ public sealed class PreparacionPostulacionesInternaController(
         {
             return StatusCode(503, new {
                 codigoError = "SERVICIO_" + ex.Servicio.ToUpperInvariant() + "_NO_DISPONIBLE",
-                message = "No fue posible consultar " + ex.Servicio + " para preparar la postulación." });
+                message = "No pudimos obtener los datos necesarios para preparar la postulación." });
         }
         catch (HttpRequestException)
         {

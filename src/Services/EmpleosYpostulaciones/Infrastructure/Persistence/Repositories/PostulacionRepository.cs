@@ -37,6 +37,9 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
             // Misma llave global que toma el inicio de cualquier preparacion IA:
             // evita que una postulacion manual se confirme mientras la IA trabaja.
             await BloqueoCupoPostulacion.TomarAsync(db, postulacion.UsuarioId, ct);
+            if (await db.ReservasCambioUsuario.AsNoTracking().AnyAsync(x =>
+                x.UsuarioId == postulacion.UsuarioId && x.ExpiraUtc > DateTime.UtcNow, ct))
+                throw PostulacionException.CambioUsuarioEnCurso();
             await BloqueoOfertaUsuario.TomarAsync(db, postulacion.UsuarioId, postulacion.EmpleoId, ct);
             var iaActiva = await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p =>
                 p.UsuarioId == postulacion.UsuarioId &&
@@ -89,13 +92,23 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
             throw;
         }
     }
+    // Seleccionar solo el resumen evita cargar el documento histórico (bytea).
+    private static IQueryable<Postulacion> SinDocumento(IQueryable<Postulacion> consulta) =>
+        consulta.Select(p => new Postulacion
+        {
+            Id = p.Id, UsuarioId = p.UsuarioId, EmpleoId = p.EmpleoId,
+            CvId = p.CvId, Estado = p.Estado, Origen = p.Origen,
+            TextoPresentacion = p.TextoPresentacion, Observaciones = p.Observaciones,
+            RequiereAprobacion = p.RequiereAprobacion,
+            HistorialEstadosJson = p.HistorialEstadosJson,
+            FechaPostulacion = p.FechaPostulacion
+        });
+
     public Task<List<Postulacion>> ObtenerPorUsuarioAsync(
         Guid usuarioId,
         CancellationToken cancellationToken = default)
     {
-        return db.Postulaciones
-            .AsNoTracking()
-            .Where(p => p.UsuarioId == usuarioId)
+        return SinDocumento(db.Postulaciones.AsNoTracking().Where(p => p.UsuarioId == usuarioId))
             .OrderByDescending(p => p.FechaPostulacion)
             .ToListAsync(cancellationToken);
     }
@@ -111,7 +124,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
     {
         var propia = await db.Empleos.AsNoTracking().AnyAsync(x =>
             x.Id == empleoId && x.UsuarioId == propietarioOfertaId, ct);
-        return propia ? await db.Postulaciones.AsNoTracking().Where(x => x.EmpleoId == empleoId)
+        return propia ? await SinDocumento(db.Postulaciones.AsNoTracking().Where(x => x.EmpleoId == empleoId))
             .OrderByDescending(x => x.FechaPostulacion).ToListAsync(ct) : null;
     }
 
@@ -173,8 +186,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         Guid postulacionId,
         CancellationToken cancellationToken = default)
     {
-        return db.Postulaciones
-            .AsNoTracking()
+        return SinDocumento(db.Postulaciones.AsNoTracking())
             .FirstOrDefaultAsync(p => p.Id == postulacionId, cancellationToken);
     }
 }

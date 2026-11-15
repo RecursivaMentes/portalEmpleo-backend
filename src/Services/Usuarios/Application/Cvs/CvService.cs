@@ -161,13 +161,20 @@ public class CvService(
     }
 
     /// <summary>Abre el archivo original del CV. Devuelve null si el CV no existe, no es de la persona o no tiene archivo.</summary>
-    public async Task<ArchivoDescarga?> DescargarArchivoAsync(
-        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
+    public Task<ArchivoDescarga?> DescargarArchivoAsync(
+        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default) =>
+        DescargarArchivoConVersionAsync(usuarioId, cvId, null, cancellationToken);
+
+    public async Task<ArchivoDescarga?> DescargarArchivoConVersionAsync(
+        Guid usuarioId, Guid cvId, long? versionEsperada, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
 
         var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
-        if (cv is null || string.IsNullOrWhiteSpace(cv.UrlArchivo)) return null;
+        if (cv is null) return null;
+        if (versionEsperada.HasValue && cv.Version != versionEsperada.Value)
+            throw new CvConflictoException("El CV cambió desde que se preparó la postulación. Revisá la versión actual.");
+        if (string.IsNullOrWhiteSpace(cv.UrlArchivo)) return null;
 
         var extension = Path.GetExtension(cv.UrlArchivo);
         var contentType = ArchivosCv.ContentTypePorExtension(extension);
@@ -180,13 +187,19 @@ public class CvService(
     }
 
     /// <summary>Genera el PDF del CV a partir de su texto (RF-13). A diferencia del archivo original, refleja las ediciones.</summary>
-    public async Task<ArchivoDescarga?> GenerarDocumentoAsync(
-        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default)
+    public Task<ArchivoDescarga?> GenerarDocumentoAsync(
+        Guid usuarioId, Guid cvId, CancellationToken cancellationToken = default) =>
+        GenerarDocumentoConVersionAsync(usuarioId, cvId, null, cancellationToken);
+
+    public async Task<ArchivoDescarga?> GenerarDocumentoConVersionAsync(
+        Guid usuarioId, Guid cvId, long? versionEsperada, CancellationToken cancellationToken = default)
     {
         if (!await UsuarioActivoAsync(usuarioId, cancellationToken)) return null;
 
         var cv = await cvs.ObtenerAsync(cvId, usuarioId, cancellationToken);
         if (cv is null) return null;
+        if (versionEsperada.HasValue && cv.Version != versionEsperada.Value)
+            throw new CvConflictoException("El CV cambió desde que se preparó la postulación. Revisá la versión actual.");
 
         // Misma limpieza que el texto extraído: también cubre caracteres colados al editar a mano.
         var texto = TextoCv.Normalizar(cv.TextoPlano)

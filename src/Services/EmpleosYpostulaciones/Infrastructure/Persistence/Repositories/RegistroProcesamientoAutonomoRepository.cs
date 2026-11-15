@@ -2,11 +2,19 @@ using Application.Postulaciones;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace EmpleosYpostulaciones.Infrastructure.Persistence.Repositories;
 
-public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : IRegistroProcesamientoAutonomo
+public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db,
+    ILogger<RegistroProcesamientoAutonomoRepository>? logger = null) : IRegistroProcesamientoAutonomo
 {
+    public Task RegistrarFalloUsuarioAsync(Guid usuarioId, Exception error, CancellationToken ct = default)
+    {
+        logger?.LogError(error, "Error procesando el usuario {UsuarioId}; el ciclo continúa.", usuarioId);
+        return Task.CompletedTask;
+    }
+
     public Task<List<Guid>> UsuariosConPendientesAsync(CancellationToken ct = default) =>
         db.EmpleosPendientes.AsNoTracking().Select(x => x.UsuarioId).Distinct().ToListAsync(ct);
 
@@ -60,8 +68,16 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : I
             x.Id == preparacionId && x.UsuarioId == usuarioId, ct);
     }
 
-    public Task GuardarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default) =>
-        db.SaveChangesAsync(ct);
+    public async Task GuardarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default)
+    {
+        foreach (var entrada in db.ChangeTracker.Entries<PreparacionPostulacion>()
+            .Where(e => e.State == EntityState.Modified))
+        {
+            var version = entrada.Property(x => x.VersionEdicion);
+            if (version.CurrentValue == version.OriginalValue) version.CurrentValue++;
+        }
+        await db.SaveChangesAsync(ct);
+    }
 
     public async Task RegistrarIntentoAsync(IntentoProcesamientoAutonomo intento,
         CancellationToken ct = default)
@@ -88,7 +104,8 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : I
             .Where(x => x.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada &&
                 x.FechaActualizacion < limiteUtc)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.Estado,
-                EstadoPreparacionPostulacion.Cancelada).SetProperty(y => y.FechaActualizacion,
+                EstadoPreparacionPostulacion.Cancelada).SetProperty(y => y.VersionEdicion, y => y.VersionEdicion + 1)
+                .SetProperty(y => y.FechaActualizacion,
                 DateTime.UtcNow), ct);
         var fallidas = await db.PreparacionesPostulacion
             .Where(x => (x.Estado == EstadoPreparacionPostulacion.Preparando ||
@@ -96,7 +113,8 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db) : I
                          x.FechaActualizacion < limiteUtc)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.Estado,
                 EstadoPreparacionPostulacion.Fallida).SetProperty(y => y.UltimoError,
-                "Ejecucion interrumpida sin confirmacion").SetProperty(y => y.FechaActualizacion,
+                "Ejecucion interrumpida sin confirmacion").SetProperty(y => y.VersionEdicion, y => y.VersionEdicion + 1)
+                .SetProperty(y => y.FechaActualizacion,
                 DateTime.UtcNow), ct);
         return canceladas + fallidas;
     }

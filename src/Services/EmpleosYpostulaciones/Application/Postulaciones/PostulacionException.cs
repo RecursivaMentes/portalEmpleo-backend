@@ -12,7 +12,7 @@ public sealed class PostulacionException : Exception
     }
 
     public static PostulacionException DatosInvalidos() =>
-        new("DATOS_INVALIDOS", "UsuarioId, EmpleoId y CvId son obligatorios.");
+        new("DATOS_INVALIDOS", "Faltan datos obligatorios para completar la solicitud.");
 
     public static PostulacionException PresentacionInvalida() =>
         new("PRESENTACION_INVALIDA", "La presentación no puede superar los 4000 caracteres.");
@@ -40,8 +40,20 @@ public sealed class PostulacionException : Exception
     public static PostulacionException PendienteDuplicado() =>
         new("PENDIENTE_DUPLICADO", "La oferta ya se encuentra en pendientes.");
 
+    public static PostulacionException TrabajoIaActivo() =>
+        new("TRABAJO_IA_ACTIVO", "Hay una preparación de IA en curso o pendiente de revisión para esta oferta. Detenela o cancelala antes de quitar la oferta.");
+
+    public static PostulacionException PendienteRetirado() =>
+        new("PENDIENTE_RETIRADO", "Esta oferta ya no está en tus pendientes. No se enviará automáticamente.");
+
     public static PostulacionException PreparacionDuplicada() =>
         new("PREPARACION_DUPLICADA", "Ya existe una preparacion pendiente para esta oferta.");
+
+    public static PostulacionException CambioNoAutorizado() =>
+        new("CAMBIO_NO_AUTORIZADO", "No pudimos confirmar este cambio. Actualizá la información y volvé a intentarlo.");
+
+    public static PostulacionException CambioUsuarioEnCurso() =>
+        new("CAMBIO_USUARIO_EN_CURSO", "Hay un cambio de tu perfil en curso. Volvé a intentarlo en unos instantes.");
 
     public static PostulacionException IaOcupada() =>
         new("IA_OCUPADA", "La IA esta trabajando en otra postulacion.");

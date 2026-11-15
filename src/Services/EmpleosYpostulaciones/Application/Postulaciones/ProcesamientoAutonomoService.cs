@@ -49,6 +49,8 @@ public sealed class ProcesamientoAutonomoService(
         foreach (var usuarioId in await registro.UsuariosConPendientesAsync(ct))
         {
             ct.ThrowIfCancellationRequested();
+            try
+            {
             var config = await consultas.ConfiguracionAsync(usuarioId, ct);
             if (config is null || !Permitido(config.Modo)) continue;
             var (inicio, fin) = DiaLocalUtc(DateTime.UtcNow, config.ZonaHoraria);
@@ -79,7 +81,8 @@ public sealed class ProcesamientoAutonomoService(
                 }
                 catch (PostulacionException ex) when (ex.CodigoError is
                     "POSTULACION_DUPLICADA" or "IA_OCUPADA" or "PREPARACION_DUPLICADA" or
-                    "OFERTA_NO_DISPONIBLE" or "OFERTA_FINALIZADA" or "OFERTA_NO_ENCONTRADA")
+                    "OFERTA_NO_DISPONIBLE" or "OFERTA_FINALIZADA" or "OFERTA_NO_ENCONTRADA" or
+                    "PENDIENTE_RETIRADO")
                 {
                     continue;
                 }
@@ -174,7 +177,8 @@ public sealed class ProcesamientoAutonomoService(
                     }
                     if (actual.CvId is not { } cvId) break;
                     var postulacion = await postulaciones.ValidarYConstruirInternoAsync(
-                        new CrearPostulacionRequest(usuarioId, oferta.Id, cvId, actual.TextoPresentacion), ct);
+                        new CrearPostulacionRequest(usuarioId, oferta.Id, cvId, actual.TextoPresentacion),
+                        ct, actual.CvVersionIAOriginal);
                     postulacion.Origen = "Automatica";
                     // La escritura, el descuento del cupo y el cierre de preparacion son atomicos.
                     await confirmacion.ConfirmarEnvioConCupoAsync(usuarioId, actual.Id,
@@ -205,6 +209,15 @@ public sealed class ProcesamientoAutonomoService(
                 }
                 // Como maximo un trabajo por usuario y ciclo; no colas paralelas.
                 break;
+            }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex)
+            {
+                // Un usuario con errores NO impide procesar a los demás.
+                // El error técnico va solo al log, nunca a la respuesta pública.
+                try { await registro.RegistrarFalloUsuarioAsync(usuarioId, ex, CancellationToken.None); }
+                catch { /* Un error de auditoría no detiene el ciclo. */ }
             }
         }
         return completadas;

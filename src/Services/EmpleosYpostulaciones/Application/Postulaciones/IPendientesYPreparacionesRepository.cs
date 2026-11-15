@@ -11,8 +11,13 @@ public interface IPendientesYPreparacionesRepository
 
     Task<List<PreparacionPostulacion>> ListarPreparacionesAsync(Guid usuarioId, CancellationToken ct = default);
     Task<PreparacionPostulacion?> ObtenerPreparacionAsync(Guid id, Guid usuarioId, CancellationToken ct = default);
+    Task<PreparacionPostulacion?> ObtenerEstadoVigenteAsync(Guid id, Guid usuarioId, CancellationToken ct = default) =>
+        ObtenerPreparacionAsync(id, usuarioId, ct);
     Task<PreparacionPostulacion?> ObtenerActivaAsync(Guid usuarioId, CancellationToken ct = default);
     Task<bool> ExistePreparacionNoFinalizadaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default);
     Task AgregarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default);
     Task GuardarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default);
+    // El adaptador de producción hace la transición bajo los bloqueos de confirmación.
+    Task GuardarCancelacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default) =>
+        GuardarPreparacionAsync(preparacion, ct);
 }

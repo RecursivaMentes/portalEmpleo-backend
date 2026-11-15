@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<EmpleoPendiente> EmpleosPendientes { get; set; }
     public DbSet<PreparacionPostulacion> PreparacionesPostulacion { get; set; }
     public DbSet<IntentoPostulacionIA> IntentosPostulacionIA { get; set; }
+    public DbSet<ConfiguracionOperativaPostulacion> ConfiguracionesOperativas { get; set; }
+    public DbSet<ReservaCambioUsuario> ReservasCambioUsuario { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -84,7 +84,7 @@ public sealed class PreparacionesService(
         }
         preparacion.FechaActualizacion = DateTime.UtcNow;
         preparacion.VersionEdicion++;
-        await repository.GuardarPreparacionAsync(preparacion, ct);
+        await repository.GuardarCancelacionAsync(preparacion, ct);
         return preparacion;
     }
 }

@@ -25,34 +25,58 @@ public sealed class RevisionIAService(IPendientesYPreparacionesRepository repo,
         prep.VersionEdicion++;
         prep.FechaActualizacion = DateTime.UtcNow;
         await repo.GuardarPreparacionAsync(prep, ct);
+        var versionTrabajo = prep.VersionEdicion;
         try
         {
             var resultado = await preparador.ModificarAsync(usuarioId, prep.EmpleoId, instrucciones,
                 prep.CvId, prep.TextoPresentacion, ct);
+            // La llamada externa puede durar minutos; recargar evitando la caché EF.
+            var vigente = await repo.ObtenerEstadoVigenteAsync(id, usuarioId, ct)
+                ?? throw PostulacionException.PreparacionDesactualizada();
+            if (vigente.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada)
+            {
+                vigente.Estado = EstadoPreparacionPostulacion.Cancelada;
+                vigente.VersionEdicion++;
+                vigente.FechaActualizacion = DateTime.UtcNow;
+                await repo.GuardarPreparacionAsync(vigente, ct);
+                return vigente;
+            }
+            if (vigente.Estado != EstadoPreparacionPostulacion.EnModificacion ||
+                vigente.VersionEdicion != versionTrabajo)
+                throw PostulacionException.PreparacionDesactualizada();
             if (resultado.TextoPresentacion is { Length: > 4000 })
                 throw PostulacionException.PresentacionInvalida();
-            prep.CvId = resultado.CvId;
-            prep.TextoPresentacion = resultado.TextoPresentacion;
-            prep.CvTextoIAPropuesto = resultado.CvTextoPropuesto;
-            prep.CvTituloIAPropuesto = resultado.CvTituloPropuesto;
-            prep.CvVersionIAOriginal = resultado.CvVersionOriginal;
-            prep.CvNuevoIAPropuesto = resultado.CrearCvNuevo;
-            prep.Estado = resultado.RequiereAprobacionCv || !resultado.CvId.HasValue
+            vigente.CvId = resultado.CvId;
+            vigente.TextoPresentacion = resultado.TextoPresentacion;
+            vigente.CvTextoIAPropuesto = resultado.CvTextoPropuesto;
+            vigente.CvTituloIAPropuesto = resultado.CvTituloPropuesto;
+            vigente.CvVersionIAOriginal = resultado.CvVersionOriginal;
+            vigente.CvNuevoIAPropuesto = resultado.CrearCvNuevo;
+            vigente.Estado = resultado.RequiereAprobacionCv || !resultado.CvId.HasValue
                 ? EstadoPreparacionPostulacion.PendienteAprobacionCv
                 : EstadoPreparacionPostulacion.PendienteAprobacion;
-            prep.VersionEdicion++;
-            prep.FechaActualizacion = DateTime.UtcNow;
-            await repo.GuardarPreparacionAsync(prep, ct);
-            return prep;
+            vigente.VersionEdicion++;
+            vigente.FechaActualizacion = DateTime.UtcNow;
+            await repo.GuardarPreparacionAsync(vigente, ct);
+            return vigente;
         }
         catch
         {
-            if (prep.Estado == EstadoPreparacionPostulacion.EnModificacion)
+            var vigente = await repo.ObtenerEstadoVigenteAsync(id, usuarioId, CancellationToken.None);
+            if (vigente?.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada)
             {
-                prep.Estado = anterior;
-                prep.VersionEdicion++;
-                prep.FechaActualizacion = DateTime.UtcNow;
-                await repo.GuardarPreparacionAsync(prep, CancellationToken.None);
+                vigente.Estado = EstadoPreparacionPostulacion.Cancelada;
+                vigente.VersionEdicion++;
+                vigente.FechaActualizacion = DateTime.UtcNow;
+                await repo.GuardarPreparacionAsync(vigente, CancellationToken.None);
+            }
+            else if (vigente?.Estado == EstadoPreparacionPostulacion.EnModificacion &&
+                     vigente.VersionEdicion == versionTrabajo)
+            {
+                vigente.Estado = anterior;
+                vigente.VersionEdicion++;
+                vigente.FechaActualizacion = DateTime.UtcNow;
+                await repo.GuardarPreparacionAsync(vigente, CancellationToken.None);
             }
             throw;
         }

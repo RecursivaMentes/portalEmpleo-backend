@@ -11,6 +11,19 @@ public sealed record ConfiguracionProcesamiento(
     string? Modo, int CompatibilidadMinima, int LimiteDiario,
     PreferenciasProcesamiento? Preferencias, string? OrdenPendientes, string? ZonaHoraria = null);
 
+public interface IConfiguracionOperativaPostulaciones
+{
+    Task<ConfiguracionProcesamiento> InicializarOLeerAsync(Guid usuarioId,
+        ConfiguracionProcesamiento legada, CancellationToken ct = default);
+    Task GuardarAsync(Guid usuarioId, ConfiguracionProcesamiento nueva,
+        Guid operacionId, CancellationToken ct = default);
+    Task<InicioCambioUsuario> IniciarCambioAsync(Guid usuarioId, CancellationToken ct = default);
+    Task FinalizarCambioAsync(Guid usuarioId, Guid operacionId, CancellationToken ct = default);
+}
+
+public sealed record InicioCambioUsuario(bool Permitido, Guid? OperacionId,
+    Guid? PreparacionId, int? VersionEdicion, string? Estado);
+
 public interface IConsultasProcesamientoInterno
 {
     Task<ConfiguracionProcesamiento?> ConfiguracionAsync(Guid usuarioId, CancellationToken ct = default);
@@ -44,6 +57,8 @@ public sealed record IntentoProcesamientoAutonomo(
 public interface IRegistroProcesamientoAutonomo
 {
     Task<List<Guid>> UsuariosConPendientesAsync(CancellationToken ct = default);
+    // Implementación predeterminada para no romper los adaptadores existentes.
+    Task RegistrarFalloUsuarioAsync(Guid usuarioId, Exception error, CancellationToken ct = default) => Task.CompletedTask;
     Task<int> CupoConsumidoAsync(Guid usuarioId, DateTime inicioUtc, DateTime finUtc, CancellationToken ct = default);
     Task<int> IntentosEnPeriodoAsync(Guid usuarioId, Guid empleoId, DateTime desdeUtc, CancellationToken ct = default);
     Task<Empleo?> ObtenerOfertaAsync(Guid empleoId, CancellationToken ct = default);

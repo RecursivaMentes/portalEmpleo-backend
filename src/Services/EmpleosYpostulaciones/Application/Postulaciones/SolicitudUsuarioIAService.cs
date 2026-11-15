@@ -51,7 +51,7 @@ public sealed class SolicitudUsuarioIAService(
         {
             var resultado = await preparador.PrepararAsync(usuarioId, empleoId, ct);
             // No alterar una preparacion si se solicito cancelacion durante la inferencia.
-            var actual = await preparaciones.ObtenerAsync(preparacion.Id, usuarioId, ct)
+            var actual = await repositorio.ObtenerEstadoVigenteAsync(preparacion.Id, usuarioId, ct)
                 ?? throw new InvalidOperationException("Preparacion no encontrada.");
             if (actual.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada)
             {
@@ -82,20 +82,23 @@ public sealed class SolicitudUsuarioIAService(
             if (!ProcesamientoAutonomoService.EnvioSinAprobacionPermitido(vigente?.Modo)) return actual;
             var postulacion = await postulaciones.ValidarYConstruirInternoAsync(
                 new CrearPostulacionRequest(usuarioId, empleoId, actual.CvId!.Value,
-                    actual.TextoPresentacion), ct);
+                    actual.TextoPresentacion), ct, actual.CvVersionIAOriginal);
             postulacion.Origen = "SolicitudUsuario";
-            await confirmacion.ConfirmarEnvioAsync(usuarioId, actual.Id,
+            await confirmacion.ConfirmarEnvioAutomaticoAsync(usuarioId, actual.Id,
                 actual.VersionEdicion, postulacion, ct);
             return await preparaciones.ObtenerAsync(actual.Id, usuarioId, ct) ?? actual;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch
         {
-            var vigente = await preparaciones.ObtenerAsync(preparacion.Id, usuarioId,
+            var vigente = await repositorio.ObtenerEstadoVigenteAsync(preparacion.Id, usuarioId,
                 CancellationToken.None);
-            if (vigente is not null && vigente.Estado != EstadoPreparacionPostulacion.Enviada)
+            if (vigente?.Estado is EstadoPreparacionPostulacion.CancelacionSolicitada or
+                EstadoPreparacionPostulacion.Preparando)
             {
-                vigente.Estado = EstadoPreparacionPostulacion.Fallida;
+                vigente.Estado = vigente.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada
+                    ? EstadoPreparacionPostulacion.Cancelada : EstadoPreparacionPostulacion.Fallida;
+                vigente.VersionEdicion++;
                 vigente.FechaActualizacion = DateTime.UtcNow;
                 await repositorio.GuardarPreparacionAsync(vigente, CancellationToken.None);
             }

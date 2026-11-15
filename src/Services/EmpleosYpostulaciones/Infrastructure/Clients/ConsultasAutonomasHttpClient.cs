@@ -5,7 +5,8 @@ using Microsoft.Extensions.Configuration;
 
 namespace EmpleosYpostulaciones.Infrastructure.Clients;
 
-public sealed class ConsultasAutonomasHttpClient(IHttpClientFactory fabrica, IConfiguration opciones)
+public sealed class ConsultasAutonomasHttpClient(IHttpClientFactory fabrica, IConfiguration opciones,
+    IConfiguracionOperativaPostulaciones? configuracionLocal = null)
     : IConsultasProcesamientoInterno, IDatosExternosOrdenamientoInterno
 {
     private sealed record CompatibilidadInterna(Guid EmpleoId, decimal Score);
@@ -40,8 +41,10 @@ public sealed class ConsultasAutonomasHttpClient(IHttpClientFactory fabrica, ICo
             $"/internal/usuarios/{usuarioId}/postulaciones/configuracion", ct);
         if (respuesta.StatusCode == HttpStatusCode.NotFound) return null;
         respuesta.EnsureSuccessStatusCode();
-        return await respuesta.Content.ReadFromJsonAsync<ConfiguracionProcesamiento>(cancellationToken: ct)
+        var legada = await respuesta.Content.ReadFromJsonAsync<ConfiguracionProcesamiento>(cancellationToken: ct)
             ?? throw new System.Text.Json.JsonException("Configuracion interna vacia.");
+        return configuracionLocal is null ? legada
+            : await configuracionLocal.InicializarOLeerAsync(usuarioId, legada, ct);
     }
 
     public async Task<ValidacionPerfilLaboralResultado?> ValidarPerfilAsync(Guid usuarioId,

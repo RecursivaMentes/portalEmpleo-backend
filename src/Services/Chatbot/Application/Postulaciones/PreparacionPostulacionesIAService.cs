@@ -35,7 +35,7 @@ public sealed class PreparacionPostulacionesIAService(IAsistenteIA asistente,
     IDatosPreparacionIA datos)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private sealed record CvResumen(Guid Id, string Titulo, bool EsPrincipal, string? VistaTexto);
+    private sealed record CvResumen(Guid Id, string Titulo, bool EsPrincipal, string? VistaTexto, long? Version);
     private sealed record Eleccion(Guid? CvId, string? TextoPresentacion,
         bool RequiereCambiosCv, string? MotivoCambiosCv);
 
@@ -67,8 +67,10 @@ public sealed class PreparacionPostulacionesIAService(IAsistenteIA asistente,
             if (cv is null) continue;
             var texto = cv.Value.TryGetProperty("textoPlano", out var tp) && tp.ValueKind == JsonValueKind.String
                 ? tp.GetString() : null;
+            var version = cv.Value.TryGetProperty("version", out var ver) &&
+                ver.TryGetInt64(out var numero) && numero > 0 ? numero : (long?)null;
             disponibles.Add(new CvResumen(cvId, titulo, principal,
-                texto is { Length: > 1200 } ? texto[..1200] : texto));
+                texto is { Length: > 1200 } ? texto[..1200] : texto, version));
         }
         if (pedido.CvPreferido.HasValue &&
             !disponibles.Any(x => x.Id == pedido.CvPreferido.Value))
@@ -154,6 +156,14 @@ public sealed class PreparacionPostulacionesIAService(IAsistenteIA asistente,
                 var titulo = t.GetString() ?? "oferta";
                 tituloPropuesto = "CV adaptado a " + titulo[..Math.Min(titulo.Length, 160)];
             }
+        }
+        // Incluso si no hay cambios propuestos al CV, fijar la versión
+        // usada para redactar la presentación.
+        if (!nuevo && versionOriginal is null)
+        {
+            // No leer de nuevo: fijar la versión del mismo contenido que vio la IA.
+            versionOriginal = disponibles.First(x => x.Id == elegida.CvId!.Value).Version
+                ?? throw new PreparacionIAException("DATOS_EXTERNOS_INVALIDOS", "No se pudo verificar la versión del CV.");
         }
         return new PreparacionInternaRespuesta(elegida.CvId,
             elegida.TextoPresentacion?.Trim(),

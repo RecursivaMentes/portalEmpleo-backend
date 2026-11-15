@@ -62,8 +62,25 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
     }
     public async Task EliminarPendienteAsync(EmpleoPendiente pendiente, CancellationToken ct = default)
     {
-        db.EmpleosPendientes.Remove(pendiente);
-        await db.SaveChangesAsync(ct);
+        // Misma secuencia de bloqueos que el envío y que el inicio de IA.
+        // Comprobar en la transacción evita retirar una oferta mientras se confirma.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await BloqueoCupoPostulacion.TomarAsync(db, pendiente.UsuarioId, ct);
+        await BloqueoOfertaUsuario.TomarAsync(db, pendiente.UsuarioId, pendiente.EmpleoId, ct);
+        var trabajoPendiente = await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p =>
+            p.UsuarioId == pendiente.UsuarioId && p.EmpleoId == pendiente.EmpleoId &&
+            p.Estado != EstadoPreparacionPostulacion.Cancelada &&
+            p.Estado != EstadoPreparacionPostulacion.Fallida &&
+            p.Estado != EstadoPreparacionPostulacion.Enviada, ct);
+        if (trabajoPendiente) throw PostulacionException.TrabajoIaActivo();
+        var vigente = await db.EmpleosPendientes.FirstOrDefaultAsync(p =>
+            p.UsuarioId == pendiente.UsuarioId && p.EmpleoId == pendiente.EmpleoId, ct);
+        if (vigente is not null)
+        {
+            db.EmpleosPendientes.Remove(vigente);
+            await db.SaveChangesAsync(ct);
+        }
+        await tx.CommitAsync(ct);
     }
 
     public Task<List<PreparacionPostulacion>> ListarPreparacionesAsync(Guid usuarioId, CancellationToken ct = default) =>
@@ -72,6 +89,15 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
 
     public Task<PreparacionPostulacion?> ObtenerPreparacionAsync(Guid id, Guid usuarioId, CancellationToken ct = default) =>
         db.PreparacionesPostulacion.FirstOrDefaultAsync(x => x.Id == id && x.UsuarioId == usuarioId, ct);
+
+    public Task<PreparacionPostulacion?> ObtenerEstadoVigenteAsync(Guid id, Guid usuarioId, CancellationToken ct = default)
+    {
+        // Evitar que EF devuelva la entidad ya cargada antes de una llamada externa.
+        var seguimiento = db.ChangeTracker.Entries<PreparacionPostulacion>()
+            .FirstOrDefault(e => e.Entity.Id == id);
+        if (seguimiento is not null) seguimiento.State = EntityState.Detached;
+        return db.PreparacionesPostulacion.FirstOrDefaultAsync(x => x.Id == id && x.UsuarioId == usuarioId, ct);
+    }
 
     public Task<PreparacionPostulacion?> ObtenerActivaAsync(Guid usuarioId, CancellationToken ct = default) =>
         db.PreparacionesPostulacion.AsNoTracking().FirstOrDefaultAsync(
@@ -96,6 +122,9 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
         {
             // El inicio de IA y la confirmacion manual comparten el MISMO bloqueo.
             await BloqueoCupoPostulacion.TomarAsync(db, preparacion.UsuarioId, ct);
+            if (await db.ReservasCambioUsuario.AsNoTracking().AnyAsync(x =>
+                x.UsuarioId == preparacion.UsuarioId && x.ExpiraUtc > DateTime.UtcNow, ct))
+                throw PostulacionException.CambioUsuarioEnCurso();
             await BloqueoOfertaUsuario.TomarAsync(db, preparacion.UsuarioId, preparacion.EmpleoId, ct);
             var iaActiva = await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p =>
                 p.UsuarioId == preparacion.UsuarioId &&
@@ -115,6 +144,12 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             if (await db.Postulaciones.AsNoTracking().AnyAsync(p =>
                 p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId, ct))
                 throw PostulacionException.Duplicada();
+            // Solo la iniciativa IA autónoma requiere una oferta en la cola.
+            // Una solicitud expresa del usuario no cambia su comportamiento.
+            if (preparacion.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
+                !await db.EmpleosPendientes.AsNoTracking().AnyAsync(p =>
+                    p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId, ct))
+                throw PostulacionException.PendienteRetirado();
             db.PreparacionesPostulacion.Add(preparacion);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
@@ -138,12 +173,45 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
 
     public async Task GuardarPreparacionAsync(PreparacionPostulacion preparacion, CancellationToken ct = default)
     {
-        // Preparacion consultada con seguimiento y filtrada por UsuarioId.
+        // Incrementar versión en TODA escritura efectiva, incluso si el servicio
+        // olvidó incrementarla. La versión original sigue siendo el token de EF.
+        foreach (var entrada in db.ChangeTracker.Entries<PreparacionPostulacion>()
+            .Where(e => e.State == EntityState.Modified))
+        {
+            var version = entrada.Property(x => x.VersionEdicion);
+            if (version.CurrentValue == version.OriginalValue) version.CurrentValue++;
+        }
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException ex) when (EsUnico(ex))
         {
             throw PostulacionException.IaOcupada();
         }
+    }
+
+    public async Task GuardarCancelacionAsync(PreparacionPostulacion propuesta, CancellationToken ct = default)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await BloqueoCupoPostulacion.TomarAsync(db, propuesta.UsuarioId, ct);
+        await BloqueoOfertaUsuario.TomarAsync(db, propuesta.UsuarioId, propuesta.EmpleoId, ct);
+        var seguimiento = db.ChangeTracker.Entries<PreparacionPostulacion>()
+            .FirstOrDefault(e => e.Entity.Id == propuesta.Id);
+        if (seguimiento is not null) seguimiento.State = EntityState.Detached;
+        var actual = await db.PreparacionesPostulacion.FromSqlInterpolated(
+            $"SELECT * FROM preparaciones_postulacion WHERE \"Id\" = {propuesta.Id} AND \"UsuarioId\" = {propuesta.UsuarioId} FOR UPDATE")
+            .SingleOrDefaultAsync(ct);
+        if (actual is null || actual.VersionEdicion != propuesta.VersionEdicion - 1)
+            throw PostulacionException.PreparacionDesactualizada();
+        var destino = propuesta.Estado;
+        var permitido = (destino == EstadoPreparacionPostulacion.CancelacionSolicitada &&
+            (actual.Estado is EstadoPreparacionPostulacion.Preparando or EstadoPreparacionPostulacion.EnModificacion)) ||
+            (destino == EstadoPreparacionPostulacion.Cancelada &&
+            (actual.Estado is EstadoPreparacionPostulacion.PendienteAprobacion or EstadoPreparacionPostulacion.PendienteAprobacionCv));
+        if (!permitido) throw PostulacionException.PreparacionNoCancelable();
+        actual.Estado = destino;
+        actual.VersionEdicion++;
+        actual.FechaActualizacion = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
     }
 
     private static bool EsUnico(DbUpdateException ex) =>

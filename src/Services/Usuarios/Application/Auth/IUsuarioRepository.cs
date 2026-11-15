@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 
 namespace Application.Auth;
 
@@ -13,4 +13,7 @@ public interface IUsuarioRepository
     Task AddAsync(Usuario usuario, CancellationToken cancellationToken = default);
 
     Task UpdateAsync(Usuario usuario, CancellationToken cancellationToken = default);
+    Task ActualizarPreferenciasLaboralesAsync(Guid usuarioId, string preferenciasJson,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("El repositorio no admite cambios de preferencias.");
 }

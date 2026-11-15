@@ -28,6 +28,8 @@ public sealed record PendienteOrdenadoResponse(
 {
     public bool Disponible { get; init; } = true;
     public string? MotivoNoDisponible { get; init; }
+    public Guid? PreparacionId { get; init; }
+    public string? EstadoPreparacion { get; init; }
 }
 
 public interface IOrdenamientoPendientesRepository
@@ -43,7 +45,8 @@ public interface IDatosExternosOrdenamiento
 public sealed class OrdenamientoPendientesService(
     IOrdenamientoPendientesRepository pendientes,
     IDatosExternosOrdenamiento externos,
-    IDatosExternosOrdenamientoInterno? internos = null)
+    IDatosExternosOrdenamientoInterno? internos = null,
+    IPendientesYPreparacionesRepository? preparaciones = null)
 {
     public async Task<List<PendienteOrdenadoResponse>> ListarAsync(
         Guid usuarioId, string accessToken, CancellationToken ct = default)
@@ -53,7 +56,7 @@ public sealed class OrdenamientoPendientesService(
         var ofertas = await pendientes.ObtenerPendientesAsync(usuarioId, ct);
         if (ofertas.Count == 0) return [];
         var datos = await externos.ObtenerAsync(usuarioId, accessToken, ct);
-        return Ordenar(ofertas, datos, DateTime.UtcNow);
+        return await AdjuntarEstadoAsync(usuarioId, Ordenar(ofertas, datos, DateTime.UtcNow), ct);
     }
 
     public async Task<List<PendienteOrdenadoResponse>> ListarInternoAsync(
@@ -62,7 +65,22 @@ public sealed class OrdenamientoPendientesService(
         if (internos is null) throw new InvalidOperationException("Ordenamiento interno no configurado.");
         var ofertas = await pendientes.ObtenerPendientesAsync(usuarioId, ct);
         if (ofertas.Count == 0) return [];
-        return Ordenar(ofertas, await internos.ObtenerInternoAsync(usuarioId, ct), DateTime.UtcNow);
+        return await AdjuntarEstadoAsync(usuarioId,
+            Ordenar(ofertas, await internos.ObtenerInternoAsync(usuarioId, ct), DateTime.UtcNow), ct);
+    }
+
+    private async Task<List<PendienteOrdenadoResponse>> AdjuntarEstadoAsync(
+        Guid usuarioId, List<PendienteOrdenadoResponse> ofertas, CancellationToken ct)
+    {
+        if (preparaciones is null) return ofertas;
+        var trabajos = (await preparaciones.ListarPreparacionesAsync(usuarioId, ct))
+            .Where(x => x.Estado != EstadoPreparacionPostulacion.Cancelada &&
+                        x.Estado != EstadoPreparacionPostulacion.Fallida &&
+                        x.Estado != EstadoPreparacionPostulacion.Enviada)
+            .GroupBy(x => x.EmpleoId).ToDictionary(g => g.Key,
+                g => g.OrderByDescending(x => x.FechaCreacion).First());
+        return ofertas.Select(o => trabajos.TryGetValue(o.EmpleoId, out var t)
+            ? o with { PreparacionId = t.Id, EstadoPreparacion = t.Estado.ToString() } : o).ToList();
     }
 
     // Un mismo orden para mostrar la lista y para elegir la siguiente oferta a procesar.

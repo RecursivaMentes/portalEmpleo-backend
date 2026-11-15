@@ -8,7 +8,11 @@ public sealed class CopiaHistoricaCvClient(HttpClient http, IConfiguration confi
 {
     private const int MaxDocumento = 10 * 1024 * 1024;
 
-    public async Task<CopiaHistoricaCv> ObtenerAsync(Guid usuarioId, Guid cvId, CancellationToken ct = default)
+    public Task<CopiaHistoricaCv> ObtenerAsync(Guid usuarioId, Guid cvId, CancellationToken ct = default) =>
+        ObtenerVersionAsync(usuarioId, cvId, null, ct);
+
+    public async Task<CopiaHistoricaCv> ObtenerVersionAsync(Guid usuarioId, Guid cvId,
+        long? versionEsperada, CancellationToken ct = default)
     {
         var clave = config["InternalServices:EmpleosYpostulaciones:Key"];
         if (string.IsNullOrWhiteSpace(clave))
@@ -17,7 +21,11 @@ public sealed class CopiaHistoricaCvClient(HttpClient http, IConfiguration confi
             $"/internal/usuarios/{usuarioId}/ia/cvs/{cvId}/documento");
         request.Headers.Add("X-Internal-Service", "EmpleosYpostulaciones");
         request.Headers.Add("X-Internal-Key", clave);
+        if (versionEsperada.HasValue)
+            request.Headers.IfMatch.Add(new EntityTagHeaderValue("\"" + versionEsperada.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\""));
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            throw PostulacionException.PreparacionDesactualizada();
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaxDocumento)
             throw new InvalidOperationException("El CV supera el limite para adjuntarlo.");

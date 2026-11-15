@@ -40,7 +40,8 @@ public sealed class AprobacionCvIAService(
             prep.CvId = cv.Id;
             prep.CvTextoIAPropuesto = null;
             prep.CvTituloIAPropuesto = null;
-            prep.CvVersionIAOriginal = null;
+            // Conservar la versión real devuelta por Usuarios tras aplicar el CV.
+            prep.CvVersionIAOriginal = cv.Version;
             prep.CvNuevoIAPropuesto = false;
             // El cupo asistido se contabiliza con bloqueo en PostgreSQL DESPUES de
             // resolver la aprobación, nunca antes de guardar el CV.
@@ -88,7 +89,7 @@ public sealed class AprobacionCvIAService(
             }
             var postulacion = await postulaciones.ValidarYConstruirInternoAsync(
                 new CrearPostulacionRequest(usuarioId, prep.EmpleoId,
-                    cv.Id, prep.TextoPresentacion), ct);
+                    cv.Id, prep.TextoPresentacion), ct, cv.Version);
             postulacion.Origen = prep.Origen == OrigenPreparacionPostulacion.IniciativaIA
                 ? "Automatica" : "SolicitudUsuario";
             if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA)
@@ -98,7 +99,7 @@ public sealed class AprobacionCvIAService(
                     prep.VersionEdicion, postulacion, config.LimiteDiario, i, f, ct);
             }
             else
-                await confirmacion.ConfirmarEnvioAsync(usuarioId, prep.Id,
+                await confirmacion.ConfirmarEnvioAutomaticoAsync(usuarioId, prep.Id,
                     prep.VersionEdicion, postulacion, ct);
             return await repositorio.ObtenerPreparacionAsync(id, usuarioId, ct) ?? prep;
         }

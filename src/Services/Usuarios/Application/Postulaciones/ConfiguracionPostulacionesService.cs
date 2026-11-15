@@ -17,7 +17,33 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
         if (usuario is null || !usuario.Estado) return null;
 
         var raiz = LeerPreferencias(usuario.PreferenciasJson);
-        return LeerConfiguracion(raiz);
+        var result = LeerConfiguracion(raiz);
+        if (raiz["preferenciasLaborales"] is not null)
+            result = result with { Preferencias = raiz["preferenciasLaborales"]!
+                .Deserialize<PreferenciasLaborales>(OpcionesJson) ?? PreferenciasLaborales.Vacias() };
+        return result;
+    }
+
+    public async Task<ConfiguracionPostulaciones?> NormalizarSinGuardarAsync(
+        Guid usuarioId, ConfiguracionPostulaciones solicitud,
+        CancellationToken cancellationToken = default)
+    {
+        var actual = await ObtenerAsync(usuarioId, cancellationToken);
+        return actual is null ? null : ValidarYNormalizar(solicitud, actual.Preferencias, actual.OrdenPendientes);
+    }
+
+    // Conserva el contrato existente, pero escribe sólo preferencias del usuario;
+    // el modo y los límites se guardan exclusivamente en Postulaciones.
+    public async Task<ConfiguracionPostulaciones?> GuardarPreferenciasAsync(
+        Guid usuarioId, ConfiguracionPostulaciones solicitud,
+        CancellationToken cancellationToken = default)
+    {
+        var actual = await ObtenerAsync(usuarioId, cancellationToken);
+        if (actual is null) return null;
+        var normalizada = ValidarYNormalizar(solicitud, actual.Preferencias, actual.OrdenPendientes);
+        var json = JsonSerializer.Serialize(normalizada.Preferencias, OpcionesJson);
+        await usuarios.ActualizarPreferenciasLaboralesAsync(usuarioId, json, cancellationToken);
+        return normalizada;
     }
 
     public async Task<ConfiguracionPostulaciones?> GuardarAsync(

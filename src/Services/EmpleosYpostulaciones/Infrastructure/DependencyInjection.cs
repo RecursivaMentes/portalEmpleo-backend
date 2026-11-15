@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IRegistroProcesamientoAutonomo, RegistroProcesamientoAutonomoRepository>();
         services.AddScoped<IOrdenamientoPendientesRepository, PendientesYPreparacionesRepository>();
         services.AddScoped<IConfirmacionPreparacionRepository, ConfirmacionPreparacionRepository>();
+        services.AddScoped<IConfiguracionOperativaPostulaciones, ConfiguracionOperativaPostulacionesRepository>();
 
         return services;
     }

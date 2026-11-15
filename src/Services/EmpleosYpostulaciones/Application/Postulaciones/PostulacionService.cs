@@ -25,21 +25,22 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             ct => cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, ct), cancellationToken);
 
     public Task<Postulacion> ValidarYConstruirInternoAsync(
-        CrearPostulacionRequest request, CancellationToken cancellationToken = default)
+        CrearPostulacionRequest request, CancellationToken cancellationToken = default,
+        long? versionCvEsperada = null)
     {
         if (validacionInterna is null) throw new InvalidOperationException("Falta validacion interna.");
         return ValidarYConstruirComunAsync(request,
             async ct => await validacionInterna.ValidarPerfilAsync(request.UsuarioId, ct)
                 ?? throw PostulacionException.PerfilIncompleto(null),
             ct => validacionInterna.ValidarCvAsync(request.UsuarioId, request.CvId, ct),
-            cancellationToken);
+            cancellationToken, versionCvEsperada);
     }
 
     private async Task<Postulacion> ValidarYConstruirComunAsync(
         CrearPostulacionRequest request,
         Func<CancellationToken, Task<ValidacionPerfilLaboralResultado>> validarPerfil,
         Func<CancellationToken, Task<bool>> validarCv,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, long? versionCvEsperada = null)
     {
         if (request.UsuarioId == Guid.Empty ||
             request.EmpleoId == Guid.Empty ||
@@ -99,7 +100,8 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
         // En tests antiguos el adaptador es opcional; en el host API se registra obligatoriamente.
         if (copiaHistorica is not null)
         {
-            var documento = await copiaHistorica.ObtenerAsync(request.UsuarioId, request.CvId, cancellationToken);
+            var documento = await copiaHistorica.ObtenerVersionAsync(request.UsuarioId, request.CvId,
+                versionCvEsperada, cancellationToken);
             postulacion.CvDocumentoEnviado = documento.Contenido;
             postulacion.CvDocumentoMime = documento.Mime;
             postulacion.CvDocumentoNombre = documento.Nombre;
