@@ -14,12 +14,12 @@ public record RegisterRequest(
     string Password,
 
     [param: Required(ErrorMessage = "Debe ingresar su nombre.")]
-    [param: RegularExpression(@"^(?=.*\p{L})[\p{L}\s]+$", ErrorMessage = "Solo se permiten letras y espacios.")]
+    [param: RegularExpression(@"\A\p{L}[\p{L}\p{M}]*(?:[ '’-]\p{L}[\p{L}\p{M}]*)*\z", ErrorMessage = "Solo se permiten letras, espacios, guiones y apóstrofes.")]
     [param: MaxLength(100, ErrorMessage = "Nombre demasiado largo.")]
     string Nombre,
 
     [param: Required(ErrorMessage = "Debe ingresar su apellido.")]
-    [param: RegularExpression(@"^(?=.*\p{L})[\p{L}\s]+$", ErrorMessage = "Solo se permiten letras y espacios.")]
+    [param: RegularExpression(@"\A\p{L}[\p{L}\p{M}]*(?:[ '’-]\p{L}[\p{L}\p{M}]*)*\z", ErrorMessage = "Solo se permiten letras, espacios, guiones y apóstrofes.")]
     [param: MaxLength(100, ErrorMessage = "Apellido demasiado largo.")]
     string Apellido
 );
