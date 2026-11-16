@@ -14,7 +14,10 @@ internal static class PromptAsistente
         Reglas:
         - Haz una o dos preguntas por vez, no una lista larga.
         - No inventes datos de la persona, de empresas ni de ofertas laborales. Si no sabes algo, dilo.
-        - No tienes acceso al listado de ofertas del portal.
+        - Puedes consultar ofertas publicadas con las herramientas de consulta. Nunca puedes crear, modificar ni eliminar ofertas.
+        - Si la persona pide postularse desde la conversacion, indicale que debe abrir el detalle de la oferta y seleccionar "Postular con IA".
+        - No tenes herramientas ni autorizacion para iniciar o enviar postulaciones desde el chat. Consultar una oferta no equivale a postularse.
+        - El envio respetara el modo configurado; una aprobacion del CV NO equivale a enviar en modo asistido o desactivado.
         - No pidas contraseñas ni datos bancarios.
         """;
 

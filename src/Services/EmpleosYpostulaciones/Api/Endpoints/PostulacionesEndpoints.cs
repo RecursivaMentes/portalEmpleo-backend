@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using Application.Postulaciones;
+using Domain.Enums;
 
 namespace EmpleosYpostulaciones.Api.Endpoints;
 
 public static class PostulacionesEndpoints
 {
+    public sealed record CambioEstadoRequest(EstadoPostulacion Estado);
     public static void MapPostulacionesEndpoints(
         this WebApplication app)
     {
@@ -41,20 +43,12 @@ public static class PostulacionesEndpoints
 
             return Results.Created(
                 $"/api/postulaciones/{postulacion.Id}",
-                new
-                {
-                    postulacion.Id,
-                    postulacion.UsuarioId,
-                    postulacion.EmpleoId,
-                    postulacion.CvId,
-                    postulacion.Estado,
-                    postulacion.FechaPostulacion
-                });
+                PostulacionResponse.DesdeEntidad(postulacion));
         });
 
         grupo.MapGet("/me", async (
             ClaimsPrincipal usuario,
-            IPostulacionRepository repository,
+            PostulacionService servicio,
             CancellationToken cancellationToken) =>
         {
             var usuarioIdToken = usuario.FindFirst("sub")?.Value;
@@ -62,18 +56,60 @@ public static class PostulacionesEndpoints
             if (!Guid.TryParse(usuarioIdToken, out var usuarioAutenticado))
                 return Results.Unauthorized();
 
-            var postulaciones = await repository.ObtenerPorUsuarioAsync(
+            var postulaciones = await servicio.ObtenerPorUsuarioAsync(
                 usuarioAutenticado, cancellationToken);
 
-            return Results.Ok(postulaciones.Select(p => new
-            {
-                p.Id,
-                p.UsuarioId,
-                p.EmpleoId,
-                p.CvId,
-                p.Estado,
-                p.FechaPostulacion
-            }));
+            return Results.Ok(postulaciones);
+        });
+
+        grupo.MapGet("/empleos/{empleoId:guid}", async (Guid empleoId,
+            ClaimsPrincipal usuario, SeguimientoPostulacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var resultado = await servicio.VerPorOfertaAsync(empleoId, usuarioId, ct);
+            return resultado is null ? Results.NotFound() : Results.Ok(resultado);
+        });
+
+        grupo.MapPost("/{id:guid}/estado", async (Guid id,
+            CambioEstadoRequest request, ClaimsPrincipal usuario,
+            SeguimientoPostulacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            var resultado = await servicio.CambiarAsync(id, usuarioId, request.Estado, ct);
+            return resultado is null ? Results.NotFound() : Results.Ok(resultado);
+        });
+
+        // Copia historica: un cambio posterior del CV original no altera el archivo enviado.
+        grupo.MapGet("/{id:guid}/cv-enviado", async (Guid id, ClaimsPrincipal usuario,
+            SeguimientoPostulacionesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            // El servicio restringe el documento al postulante o al propietario de la oferta.
+            var archivo = await servicio.ObtenerDocumentoEnviadoAsync(id, usuarioId, ct);
+            return archivo is null ? Results.NotFound() :
+                Results.File(archivo.Contenido, archivo.Mime, archivo.Nombre);
+        });
+
+        // La ruta /{id:guid} evita conflictos con /me. Todo el grupo exige JWT.
+        grupo.MapGet("/{id:guid}", async (
+            Guid id,
+            ClaimsPrincipal usuario,
+            PostulacionService servicio,
+            CancellationToken cancellationToken) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+
+            var postulacion = await servicio.ObtenerPorIdAsync(
+                id, usuarioId, cancellationToken);
+
+            // Mismo resultado cuando no existe o pertenece a otro usuario.
+            return postulacion is null
+                ? Results.NotFound()
+                : Results.Ok(postulacion);
         });
     }
 }

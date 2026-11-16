@@ -1,7 +1,9 @@
 using Application.Auth;
 using Application.Cvs;
 using Application.PerfilLaboral;
+using Application.Postulaciones;
 using Microsoft.AspNetCore.Mvc;
+using Usuarios.Api.Services;
 using System.Text.RegularExpressions;
 using Usuarios.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,7 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddScoped<ProteccionTrabajoIAFilter>();
+builder.Services.AddControllers(options => options.Filters.AddService<ProteccionTrabajoIAFilter>());
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<ControlPostulacionesClient>(client => client.Timeout = TimeSpan.FromMinutes(3));
 builder.Services.AddOpenApi();
 
 builder.Services.AddCors(options =>
@@ -124,6 +129,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PerfilLaboralService>();
+builder.Services.AddScoped<ConfiguracionPostulacionesService>();
 builder.Services.AddScoped<CvService>();
 
 var issuer = builder.Configuration["Jwt:Issuer"]

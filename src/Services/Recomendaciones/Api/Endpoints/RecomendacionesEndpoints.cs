@@ -103,5 +103,43 @@ public static class RecomendacionesEndpoints
 
                 return Results.Ok(recomendaciones);
             }).RequireAuthorization();
+
+        app.MapGet("/api/recomendaciones/compatibilidad/{empleoId:guid}",
+            async (
+                Guid empleoId,
+                ClaimsPrincipal usuario,
+                HttpRequest solicitud,
+                AnalisisOfertasService service,
+                CancellationToken cancellationToken) =>
+            {
+                if (empleoId == Guid.Empty)
+                    return Results.BadRequest(new { mensaje = "El empleoId es obligatorio." });
+
+                if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                    return Results.Unauthorized();
+
+                var autorizacion = solicitud.Headers.Authorization.ToString();
+                if (!autorizacion.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    return Results.Unauthorized();
+
+                var accessToken = autorizacion["Bearer ".Length..].Trim();
+                if (string.IsNullOrWhiteSpace(accessToken))
+                    return Results.Unauthorized();
+
+                var (compatibilidad, error) = await service.AnalizarEmpleoAsync(
+                    usuarioId, empleoId, accessToken, cancellationToken);
+
+                return error switch
+                {
+                    "PERFIL_NO_ENCONTRADO" => Results.NotFound(
+                        new { mensaje = "No se encontró el perfil laboral del usuario." }),
+                    "EMPLEO_NO_ENCONTRADO" => Results.NotFound(
+                        new { mensaje = "No se encontró la oferta laboral publicada." }),
+                    "REQUISITOS_INSUFICIENTES" => Results.UnprocessableEntity(
+                        new { mensaje = "La oferta no tiene requisitos para calcular la compatibilidad." }),
+                    null when compatibilidad is not null => Results.Ok(compatibilidad),
+                    _ => Results.Problem("No se pudo obtener la compatibilidad de la oferta.")
+                };
+            }).RequireAuthorization();
     }
 }

@@ -24,6 +24,12 @@ public sealed class CvRepository(AppDbContext db) : ICvRepository
     public async Task AgregarAsync(Cv cv, CancellationToken cancellationToken = default)
         => await db.Cvs.AddAsync(cv, cancellationToken);
 
+    public Task<OperacionCvIA?> ObtenerOperacionCvIAAsync(Guid operacionId, Guid usuarioId, CancellationToken ct = default) =>
+        db.OperacionesCvIA.AsNoTracking().FirstOrDefaultAsync(x => x.Id == operacionId && x.UsuarioId == usuarioId, ct);
+
+    public async Task RegistrarOperacionCvIAAsync(OperacionCvIA operacion, CancellationToken ct = default) =>
+        await db.OperacionesCvIA.AddAsync(operacion, ct);
+
     public async Task<T> EjecutarExclusivoAsync<T>(Guid usuarioId, Func<Task<T>> accion, CancellationToken cancellationToken = default)
     {
         await using var transaccion = await db.Database.BeginTransactionAsync(cancellationToken);
