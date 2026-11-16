@@ -1,4 +1,5 @@
 using Application.Auth;
+using Application.Cvs;
 using Application.PerfilLaboral;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
@@ -12,6 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 // Solo cambia el formato de los errores automáticos de validación del perfil laboral.
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
@@ -116,6 +126,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PerfilLaboralService>();
 builder.Services.AddScoped<NotificacionService>();
+builder.Services.AddScoped<CvService>();
 
 var issuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException("Falta Jwt:Issuer");
@@ -195,9 +206,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("Frontend");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+

@@ -52,9 +52,19 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("UsuarioId")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(1L);
+
                     b.HasKey("Id");
 
                     b.HasIndex("UsuarioId");
+
+                    b.HasIndex(new[] { "UsuarioId" }, "IX_cvs_usuario_principal")
+                        .IsUnique()
+                        .HasFilter("\"EsPrincipal\" = TRUE");
 
                     b.ToTable("cvs", (string)null);
                 });

@@ -8,6 +8,7 @@ public class Cv
     public string? UrlArchivo { get; set; }
     public string? TextoPlano { get; set; }
     public bool EsPrincipal { get; set; }
+    public long Version { get; set; } = 1;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
     public DateTime FechaActualizacion { get; set; } = DateTime.UtcNow;
 

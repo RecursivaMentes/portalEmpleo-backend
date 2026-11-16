@@ -13,6 +13,10 @@ public class CvConfiguration : IEntityTypeConfiguration<Cv>
 
         builder.Property(x => x.Titulo).HasMaxLength(200).IsRequired();
         builder.Property(x => x.UrlArchivo).HasMaxLength(500);
+        builder.Property(x => x.Version).IsConcurrencyToken().HasDefaultValue(1L);
+        builder.HasIndex(x => x.UsuarioId);
+        builder.HasIndex(x => x.UsuarioId, "IX_cvs_usuario_principal")
+            .IsUnique().HasFilter("\"EsPrincipal\" = TRUE");
 
         builder.HasOne(x => x.Usuario)
             .WithMany(x => x.Cvs)

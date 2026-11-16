@@ -189,3 +189,69 @@ El frontend en desarrollo consume `GET /api/empleos`; **ese controlador aun
 no forma parte del PR #3**, que prepara la estructura de microservicios.
 No se incorpora aqui ese endpoint, ni CORS, ni clientes entre servicios sin
 su caso de uso correspondiente.
+
+## Chatbot (asistente de IA)
+
+El servicio `Chatbot` expone un chat con historial respaldado por Claude (API de Anthropic). Escucha en `http://localhost:5079` y **todos sus endpoints requieren un token JWT** emitido por el servicio Usuarios (`POST /api/auth/login`). El id del usuario se toma del claim `sub` del token.
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| `POST` | `/api/chats` | Crea un chat. Cuerpo opcional: `{ "tipo": "Asistente" }` |
+| `GET` | `/api/chats` | Lista los chats del usuario |
+| `GET` | `/api/chats/{chatId}/mensajes` | Devuelve el historial del chat |
+| `POST` | `/api/chats/{chatId}/mensajes` | Envía `{ "contenido": "..." }`, guarda el mensaje y la respuesta del asistente y devuelve ambos |
+
+Un usuario solo puede ver y escribir en sus propios chats (`404` en caso contrario). Si el asistente no está disponible la API responde `503` y **no se guarda nada**, para que el historial no quede con mensajes sin respuesta. Al modelo se le envían como contexto los últimos 50 mensajes del chat.
+
+**Perfil como contexto (RF-07).** En cada mensaje el Chatbot consulta el perfil de la persona en el servicio Usuarios, reenviando su mismo token (`GET /api/auth/profile` y `GET /api/perfil-laboral/me`), y se lo entrega al modelo como contexto para que no vuelva a preguntar lo que ya está cargado. Al modelo no se le envían el email ni el teléfono. Si Usuarios no responde (o la persona no tiene perfil laboral), el chat sigue funcionando sin ese contexto. La URL de Usuarios se configura en `Servicios:Usuarios:BaseUrl` (por defecto `http://localhost:5078`). Por ahora el asistente solo **consulta** el perfil; todavía no lo modifica.
+
+**Completar el perfil conversando (RF-06).** El asistente puede guardar datos en el perfil mediante herramientas (*tool use*): el modelo decide cuándo llamarlas y el Chatbot las ejecuta contra Usuarios con el token de la persona. Cada herramienta guarda un solo dato:
+
+| Herramienta | Qué hace |
+| --- | --- |
+| `agregar_experiencia` | Agrega una experiencia laboral (fechas `AAAA-MM-DD`) |
+| `agregar_formacion` | Agrega una formación académica |
+| `agregar_habilidad` / `agregar_idioma` | Agrega, o actualiza el nivel si ya existe |
+| `actualizar_resumen` | Reemplaza el resumen profesional |
+| `indicar_sin_experiencia` | Marca que todavía no tiene experiencia (solo si no hay experiencias cargadas) |
+| `actualizar_datos_personales` | Cambia nombre, apellido o teléfono |
+| `actualizar_preferencias` | Reemplaza las listas de preferencias que se envíen |
+
+- Como `PUT /api/perfil-laboral/me` reemplaza el perfil laboral **entero**, el Chatbot lee el perfil vigente, aplica el cambio y lo guarda completo; así el modelo nunca puede borrar datos sin querer. **No hay herramientas de borrado.**
+- Las validaciones de Usuarios (valores permitidos, fechas, "experiencia o sin experiencia") se mantienen. Si Usuarios rechaza un guardado, su mensaje se le devuelve al modelo para que se lo explique a la persona. Por ejemplo, un perfil laboral nuevo no se puede guardar hasta saber si tiene experiencia, y el asistente tiene instrucciones de preguntarlo primero.
+- Las preferencias se guardan en `PreferenciasJson` con este formato: `{ "puestosInteres": [], "ubicaciones": [], "modalidades": ["Presencial"|"Remoto"|"Hibrido"], "excluir": [] }`. Las claves que no maneja el asistente se conservan.
+- Solo se ofrecen herramientas si se pudo leer el perfil. Se apagan con `Asistente:HerramientasPerfil: false`.
+- Máximo de 5 rondas de herramientas por mensaje.
+- Las llamadas a herramientas no se guardan en el historial del chat (solo el texto): el perfil real, releído en cada mensaje, es la fuente de verdad.
+- **Ollama:** no todos los modelos locales soportan herramientas ni las llaman bien. Si el modelo no las soporta, el Chatbot reintenta sin ellas; si las llama mal, apágalas con `Asistente:HerramientasPerfil`.
+
+Configuración local (desde la raíz del backend; los valores van en user-secrets, nunca en git):
+
+```powershell
+# Base de datos del servicio (ver la sección de PostgreSQL)
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=portalempleo_chatbot;Username=postgres;Password=CAMBIAR" --project src/Services/Chatbot/Api/Api.csproj
+
+# Debe ser la MISMA clave que usa el servicio Usuarios para firmar los tokens
+dotnet user-secrets set "Jwt:Key" "<la misma clave de Usuarios>" --project src/Services/Chatbot/Api/Api.csproj
+
+# Clave de la API de Anthropic (alternativa: variable de entorno ANTHROPIC_API_KEY)
+dotnet user-secrets set "Anthropic:ApiKey" "<tu clave>" --project src/Services/Chatbot/Api/Api.csproj
+```
+
+El modelo y el máximo de tokens por respuesta se cambian en `Anthropic:Model` y `Anthropic:MaxTokens` de `appsettings.json`. Las solicitudes de ejemplo están en `src/Services/Chatbot/Api/Api.http`.
+
+### Usar Ollama (modelo local, sin costo)
+
+El Chatbot puede usar un modelo local a través de [Ollama](https://ollama.com) en lugar de Claude, útil para desarrollar y probar sin API key. La respuesta es de menor calidad que la de Claude, pero el flujo (autenticación, chats, historial) es el mismo.
+
+1. Instalar Ollama y descargar un modelo (la primera vez baja unos 2 GB): `ollama pull llama3.2`
+2. Verificar que responde: `ollama run llama3.2 "Hola"`
+3. Activarlo solo en tu máquina con user-secrets, para no cambiar el `appsettings.json` compartido:
+
+```powershell
+dotnet user-secrets set "Asistente:Proveedor" "Ollama" --project src/Services/Chatbot/Api/Api.csproj
+```
+
+Para volver a Claude: `dotnet user-secrets remove "Asistente:Proveedor" --project src/Services/Chatbot/Api/Api.csproj`.
+
+Opciones (`appsettings.json`, sección `Ollama`): `BaseUrl` (por defecto `http://localhost:11434`), `Model` (por defecto `llama3.2`) y `TimeoutSegundos` (por defecto 180; la primera respuesta es lenta porque el modelo se carga en memoria). Si Ollama no está corriendo o el modelo no está descargado, la API responde `503`.

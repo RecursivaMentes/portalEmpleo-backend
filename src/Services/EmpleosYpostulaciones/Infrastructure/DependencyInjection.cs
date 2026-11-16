@@ -1,4 +1,5 @@
 using Application.Empleos;
+using Application.Postulaciones;
 using EmpleosYpostulaciones.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +18,7 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IEmpleoRepository, EmpleoRepository>();
+        services.AddScoped<IPostulacionRepository, PostulacionRepository>();
 
         return services;
     }

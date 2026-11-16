@@ -18,3 +18,89 @@ Content-Type: application/json
 # POST {{Usuarios_HostAddress}}/api/auth/login
 # Content-Type: application/json
 # { "email": "TU_CORREO", "password": "TU_CONTRASENA" }
+
+### ---- CVs (requieren token: iniciar sesion y copiar el accessToken en @token) ----
+@token = PEGAR_ACCESS_TOKEN_AQUI
+
+### Listar mis CV (el actualizado mas reciente primero, sin el contenido)
+GET {{Usuarios_HostAddress}}/api/cvs
+Authorization: Bearer {{token}}
+
+### Crear un CV. El primero que se crea es siempre el principal
+POST {{Usuarios_HostAddress}}/api/cvs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "CV Backend",
+  "textoPlano": "Desarrollador .NET con 5 anios de experiencia...",
+  "esPrincipal": false
+}
+
+@cvId = PEGAR_ID_DEL_CV_AQUI
+
+### Ver un CV con su contenido
+GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}
+Authorization: Bearer {{token}}
+
+### Actualizar (parcial: lo que no se envia no cambia; textoPlano vacio borra el contenido)
+PUT {{Usuarios_HostAddress}}/api/cvs/{{cvId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "CV Backend v2",
+  "esPrincipal": true
+}
+
+### Eliminar un CV (si era el principal, pasa a serlo el mas reciente)
+DELETE {{Usuarios_HostAddress}}/api/cvs/{{cvId}}
+Authorization: Bearer {{token}}
+
+### Validar que un CV es mio (lo usa el servicio de postulaciones): 204 si lo es, 404 si no
+GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/validacion
+Authorization: Bearer {{token}}
+
+### Crear un CV subiendo un archivo (PDF o Word .docx, hasta 5 MB). titulo y esPrincipal son opcionales
+POST {{Usuarios_HostAddress}}/api/cvs/archivo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="titulo"
+
+Mi CV subido
+--limite
+Content-Disposition: form-data; name="archivo"; filename="cv.pdf"
+Content-Type: application/pdf
+
+< ./cv.pdf
+--limite--
+
+### Reemplazar (o agregar) el archivo de un CV que ya existe
+PUT {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/archivo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="archivo"; filename="cv.docx"
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+
+< ./cv.docx
+--limite--
+
+### Descargar el archivo original del CV
+GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/archivo
+Authorization: Bearer {{token}}
+
+### Quitar el archivo de un CV (el CV y su texto se conservan)
+DELETE {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/archivo
+Authorization: Bearer {{token}}
+
+### Volver a leer el texto del archivo del CV y ponerlo como contenido (al subir un archivo ya se hace solo)
+POST {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/extraer-texto
+Authorization: Bearer {{token}}
+
+### Descargar el CV en PDF, generado a partir de su contenido de texto
+GET {{Usuarios_HostAddress}}/api/cvs/{{cvId}}/descargar
+Authorization: Bearer {{token}}
