@@ -12,6 +12,7 @@ using Usuarios.Infrastructure.Persistence.Repositories;
 using Usuarios.Infrastructure.Security;
 
 using Usuarios.Infrastructure.Storage;
+using Usuarios.Infrastructure.Email;
 
 using Usuarios.Infrastructure.Workers;
 
@@ -42,6 +43,8 @@ public static class DependencyInjection
 
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ITokenService, JwtTokenService>();
+        services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
+        services.AddScoped<IEmailService, GmailEmailService>();
 
         services.AddSingleton<IExtractorTextoCv, ExtractorTextoCv>();
 
