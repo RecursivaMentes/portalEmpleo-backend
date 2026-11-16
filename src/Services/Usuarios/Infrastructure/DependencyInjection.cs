@@ -1,4 +1,4 @@
-
+using Usuarios.Infrastructure.Email;
 using Application.Auth;
 using Application.Notificaciones;
 using Application.Cvs;
@@ -40,7 +40,7 @@ public static class DependencyInjection
 
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ITokenService, JwtTokenService>();
-
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddSingleton<IExtractorTextoCv, ExtractorTextoCv>();
         services.AddSingleton<IGeneradorDocumentoCv, GeneradorPdfCv>();
 

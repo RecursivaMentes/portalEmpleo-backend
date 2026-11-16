@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿
+using System.Text.Json;
 using Application.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,22 +22,80 @@ public class AuthController(AuthService authService) : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Email, contraseña incorrectos o usuario inactivo."
+                message = "Email, contraseña incorrectos o usuario inactivo o sin verificar."
             });
         }
 
         return Ok(response);
     }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register(
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        var exito = await authService.RegisterAsync(request, cancellationToken);
-        if (!exito)
-            return Conflict(new { message = "El correo electronico ya esta registrado." });
+        var exito = await authService.RegisterAsync(
+            request, cancellationToken);
 
-        return Ok(new { message = "Usuario registrado con exito." });
+        if (!exito)
+        {
+            return Conflict(new
+            {
+                message = "El correo electronico ya esta registrado."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Usuario registrado. Se envio un codigo de verificacion al correo."
+        });
+    }
+
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail(
+        [FromBody] VerifyEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var exito = await authService.VerifyEmailAsync(
+            request.Email,
+            request.Codigo,
+            cancellationToken);
+
+        if (!exito)
+        {
+            return BadRequest(new
+            {
+                message = "Codigo invalido o vencido."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Correo verificado correctamente. Ya podes iniciar sesion."
+        });
+    }
+
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification(
+        [FromBody] ResendVerificationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var exito = await authService.ResendVerificationCodeAsync(
+            request.Email,
+            cancellationToken);
+
+        if (!exito)
+        {
+            return BadRequest(new
+            {
+                message = "No se pudo reenviar el codigo."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Se envio un nuevo codigo de verificacion."
+        });
     }
 
     [Authorize]
@@ -46,6 +105,7 @@ public class AuthController(AuthService authService) : ControllerBase
         CancellationToken cancellationToken)
     {
         var userIdToken = User.FindFirst("sub")?.Value;
+
         if (!Guid.TryParse(userIdToken, out var userId))
             return Unauthorized(new { message = "Token invalido." });
 
@@ -55,25 +115,41 @@ public class AuthController(AuthService authService) : ControllerBase
             request.PreferenciasJson is null &&
             request.ReglasPostulacion is null)
         {
-            return BadRequest(new { message = "Debe indicar al menos un campo para actualizar." });
+            return BadRequest(new
+            {
+                message = "Debe indicar al menos un campo para actualizar."
+            });
         }
 
-       
-        if (request.PreferenciasJson is not null){
+        if (request.PreferenciasJson is not null)
+        {
             try
-            {   
-                using var json = JsonDocument.Parse(request.PreferenciasJson);
-                if (json.RootElement.ValueKind != JsonValueKind.Object){
-                    ModelState.AddModelError("PreferenciasJson", "PreferenciasJson debe ser un objeto JSON.");
+            {
+                using var json = JsonDocument.Parse(
+                    request.PreferenciasJson);
+
+                if (json.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    ModelState.AddModelError(
+                        "PreferenciasJson",
+                        "PreferenciasJson debe ser un objeto JSON.");
+
                     return ValidationProblem();
                 }
             }
-            catch (JsonException){
-                ModelState.AddModelError("PreferenciasJson", "PreferenciasJson no contiene JSON válido.");
+            catch (JsonException)
+            {
+                ModelState.AddModelError(
+                    "PreferenciasJson",
+                    "PreferenciasJson no contiene JSON valido.");
+
                 return ValidationProblem();
             }
         }
-        var exito = await authService.UpdateAsync(userId, request, cancellationToken);
+
+        var exito = await authService.UpdateAsync(
+            userId, request, cancellationToken);
+
         if (!exito)
             return NotFound(new { message = "Usuario no encontrado." });
 
@@ -82,13 +158,17 @@ public class AuthController(AuthService authService) : ControllerBase
 
     [Authorize]
     [HttpGet("profile")]
-    public async Task<IActionResult> GetProfile(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetProfile(
+        CancellationToken cancellationToken)
     {
         var userIdToken = User.FindFirst("sub")?.Value;
+
         if (!Guid.TryParse(userIdToken, out var userId))
             return Unauthorized(new { message = "Token invalido." });
 
-        var perfil = await authService.GetByIdAsync(userId, cancellationToken);
+        var perfil = await authService.GetByIdAsync(
+            userId, cancellationToken);
+
         if (perfil is null)
             return NotFound(new { message = "Usuario no encontrado." });
 

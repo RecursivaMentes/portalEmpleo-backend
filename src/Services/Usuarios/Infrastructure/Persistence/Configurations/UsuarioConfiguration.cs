@@ -20,5 +20,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(x => x.PreferenciasJson).HasColumnType("jsonb");
         builder.Property(x => x.ReglasPostulacion).HasMaxLength(2000);
         builder.Property(x => x.Rol).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.EmailVerificado).HasDefaultValue(false);
+        builder.Property(x => x.CodigoVerificacionHash).HasMaxLength(128);
+        builder.Property(x => x.CodigoVerificacionExpira);
     }
 }

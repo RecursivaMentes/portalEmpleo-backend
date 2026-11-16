@@ -19,4 +19,7 @@ public class Usuario
     public PerfilLaboral? PerfilLaboral { get; set; }
     public ICollection<Cv> Cvs { get; set; } = [];
     public ICollection<Empresa> Empresas { get; set; } = [];
+    public bool EmailVerificado { get; set; } = false;
+    public string? CodigoVerificacionHash { get; set; }
+    public DateTime? CodigoVerificacionExpira { get; set; }
 }
