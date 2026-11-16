@@ -18,7 +18,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials(); //para usar cookies
     });
 });
 // Solo cambia el formato de los errores automáticos de validación del perfil laboral.
@@ -167,6 +168,12 @@ builder.Services
         // Los endpoints de perfil laboral devuelven mensajes comprensibles al usuario.
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>{
+            if (context.Request.Cookies.TryGetValue("AuthToken", out var token)){
+                context.Token = token;
+            }
+            return Task.CompletedTask;
+            },
             OnChallenge = context =>
             {
                 if (!context.Request.Path.StartsWithSegments("/api/perfil-laboral"))

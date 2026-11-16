@@ -27,13 +27,9 @@ public static class PostulacionesEndpoints
             {
                 return Results.Forbid();
             }
-
-            // Se reutiliza el JWT validado por el middleware para consultar Usuarios.
-            var authorization = httpContext.Request.Headers.Authorization.ToString();
-            if (!authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                return Results.Unauthorized();
-            var token = authorization.Substring("Bearer ".Length).Trim();
-            if (string.IsNullOrWhiteSpace(token))
+            
+            // Se reutiliza el JWT de la cookie validado por el middleware para consultar Usuarios.
+            if (!httpContext.Request.Cookies.TryGetValue("AuthToken", out var token) || string.IsNullOrWhiteSpace(token))
                 return Results.Unauthorized();
 
             var postulacion = await servicio.CrearAsync(

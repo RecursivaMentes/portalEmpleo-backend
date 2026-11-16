@@ -79,11 +79,9 @@ public class ChatsController(ChatService chatService) : ControllerBase
     /// <summary>Token de la petición actual, que se reenvía a Usuarios para consultar el perfil.</summary>
     private string ObtenerAccessToken()
     {
-        var header = Request.Headers.Authorization.ToString();
-
-        return header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? header["Bearer ".Length..].Trim()
-            : string.Empty;
+        return Request.Cookies.TryGetValue("AuthToken", out var token) 
+        ? token 
+        : string.Empty;
     }
 
     private bool TryGetUsuarioId(out Guid usuarioId)

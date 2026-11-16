@@ -25,8 +25,34 @@ public class AuthController(AuthService authService) : ControllerBase
             });
         }
 
-        return Ok(response);
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true, // Protege el token contra ataques XSS
+            Secure = true,   // Requiere HTTPS
+            SameSite = SameSiteMode.Strict, // Cambia a SameSiteMode.None si el front está en otro dominio/puerto
+            Expires = response.ExpiresAtUtc
+        };
+
+        Response.Cookies.Append("AuthToken", response.AccessToken, cookieOptions);
+
+        return Ok(new { message = "Sesión iniciada correctamente." });
     }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        // Debe coincidir con las opciones de SameSite/Secure usadas al crearla
+        Response.Cookies.Delete("AuthToken", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict // Igual que en Login
+        });
+
+        return Ok(new { message = "Sesión cerrada correctamente." });
+    }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register(
         [FromBody] RegisterRequest request,

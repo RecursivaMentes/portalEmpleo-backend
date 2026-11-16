@@ -91,10 +91,8 @@ public class AnalisisCvController(
 
     private string ObtenerAccessToken()
     {
-        var header = Request.Headers.Authorization.ToString();
-
-        return header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? header["Bearer ".Length..].Trim()
-            : string.Empty;
+        return Request.Cookies.TryGetValue("AuthToken", out var token) 
+        ? token 
+        : string.Empty;
     }
 }
