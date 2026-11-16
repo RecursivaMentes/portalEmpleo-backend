@@ -7,7 +7,9 @@ namespace Application.Auth;
 public class AuthService(
     IUsuarioRepository usuarios,
     IPasswordService passwords,
-    ITokenService tokens)
+    ITokenService tokens,
+    IPasswordResetTokenService passwordResetTokens,
+    IEmailService emailService)
 {
     public async Task<LoginResponse?> LoginAsync(
         LoginRequest request,
@@ -136,5 +138,62 @@ public class AuthService(
             cancellationToken);
 
         return true;
+    }
+
+    public async Task ForgotPasswordAsync(
+        ForgotPasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var usuario = await usuarios.GetByEmailAsync(
+            request.Email,
+            cancellationToken);
+
+        if (usuario is null || !usuario.Estado)
+            return;
+
+        var token = passwordResetTokens.GenerateToken(
+            usuario.Id,
+            usuario.PasswordHash);
+
+        var resetLink =
+            "http://localhost:5173/restablecer-contrasena" +
+            $"?email={Uri.EscapeDataString(usuario.Email)}" +
+            $"&token={Uri.EscapeDataString(token)}";
+
+        await emailService.SendPasswordResetEmailAsync(
+            usuario.Email,
+            resetLink,
+            cancellationToken);
+    }
+
+    public async Task<bool> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var usuario = await usuarios.GetByEmailAsync(
+            request.Email,
+            cancellationToken);
+
+        if (usuario is null || !usuario.Estado)
+            return false;
+
+        if (!passwordResetTokens.ValidateToken(
+            request.Token,
+            usuario.Id,
+            usuario.PasswordHash))
+            return false;
+
+        if (passwords.VerifyPassword(
+            usuario.PasswordHash,
+            request.NewPassword))
+            return false;
+
+        var newPasswordHash = passwords.HashPassword(request.NewPassword);
+
+        return await usuarios.UpdatePasswordIfUnchangedAsync(
+            usuario.Id,
+            usuario.PasswordHash,
+            newPasswordHash,
+            cancellationToken);
     }
 }

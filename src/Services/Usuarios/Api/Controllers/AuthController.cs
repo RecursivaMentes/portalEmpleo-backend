@@ -2,6 +2,7 @@
 using Application.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Usuarios.Api.Controllers;
 
@@ -166,6 +167,80 @@ public class AuthController(AuthService authService) : ControllerBase
         return Ok(new
         {
             message = "Contraseña actualizada correctamente."
+        });
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("password-recovery")]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new
+            {
+                message = "Ingresá tu correo electrónico."
+            });
+
+        await authService.ForgotPasswordAsync(
+            request,
+            cancellationToken);
+
+        return Ok(new
+        {
+            message = "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Token) ||
+            string.IsNullOrWhiteSpace(request.NewPassword) ||
+            string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        {
+            return BadRequest(new
+            {
+                message = "Todos los campos son obligatorios."
+            });
+        }
+
+        if (request.NewPassword != request.ConfirmPassword)
+        {
+            return BadRequest(new
+            {
+                message = "Las contraseñas no coinciden."
+            });
+        }
+
+        if (request.NewPassword.Length < 8)
+        {
+            return BadRequest(new
+            {
+                message = "La contraseña debe tener al menos 8 caracteres."
+            });
+        }
+
+        var success = await authService.ResetPasswordAsync(
+            request,
+            cancellationToken);
+
+        if (!success)
+        {
+            return BadRequest(new
+            {
+                message = "El enlace de recuperación no es válido o ha vencido."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Contraseña restablecida correctamente."
         });
     }
 }

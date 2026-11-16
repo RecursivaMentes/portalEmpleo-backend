@@ -10,6 +10,7 @@ using Usuarios.Infrastructure.Documentos;
 using Usuarios.Infrastructure.Persistence.Repositories;
 using Usuarios.Infrastructure.Security;
 using Usuarios.Infrastructure.Storage;
+using Usuarios.Infrastructure.Email;
 
 namespace Usuarios.Infrastructure;
 
@@ -32,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<IPerfilLaboralRepository, PerfilLaboralRepository>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ITokenService, JwtTokenService>();
+        services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
+        services.AddScoped<IEmailService, GmailEmailService>();
 
         services.AddSingleton<IExtractorTextoCv, ExtractorTextoCv>();
 
