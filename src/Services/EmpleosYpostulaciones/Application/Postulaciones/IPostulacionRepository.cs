@@ -18,6 +18,9 @@ public interface IPostulacionRepository
         Postulacion postulacion,
         CancellationToken cancellationToken = default);
 
+    Task<bool> OcultarParaUsuarioAsync(Guid postulacionId, Guid usuarioId, CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
     Task<List<Postulacion>> ObtenerPorUsuarioAsync(
         Guid usuarioId,
         CancellationToken cancellationToken = default);

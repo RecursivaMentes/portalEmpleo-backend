@@ -18,13 +18,13 @@ public static class PerfilCompletitud
 
         if (perfil is null)
         {
-            faltantes.Add("Resumen profesional");
+            // El resumen profesional es opcional para postular.
             faltantes.Add("Experiencia laboral o declaración SinExperiencia");
             faltantes.Add("Habilidades");
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(perfil.Resumen)) faltantes.Add("Resumen profesional");
+            // El resumen profesional no bloquea postulaciones.
             // SinExperiencia ya se exige expresamente al guardar el perfil laboral; se refleja en la respuesta existente.
             if (perfil.Experiencias is not { Count: > 0 } && !perfil.SinExperiencia)
                 faltantes.Add("Experiencia laboral o declaración SinExperiencia");

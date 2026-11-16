@@ -19,6 +19,7 @@ public class Postulacion
     public bool RequiereAprobacion { get; set; }
     public string HistorialEstadosJson { get; set; } = "[]";
     public DateTime FechaPostulacion { get; set; } = DateTime.UtcNow;
+    public bool OcultaParaUsuario { get; set; }
 
     public Empleo Empleo { get; set; } = null!;
 }

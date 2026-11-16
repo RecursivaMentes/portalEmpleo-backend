@@ -25,7 +25,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         return db.Postulaciones
             .AnyAsync(p =>
                 p.UsuarioId == usuarioId &&
-                p.EmpleoId == empleoId,
+                p.EmpleoId == empleoId && p.Estado != EstadoPostulacion.Retirada,
                 cancellationToken);
     }
 
@@ -93,6 +93,13 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         }
     }
     // Seleccionar solo el resumen evita cargar el documento histórico (bytea).
+        // Ocultar del historial personal no borra la postulación ni su CV histórico.
+    public async Task<bool> OcultarParaUsuarioAsync(Guid postulacionId, Guid usuarioId, CancellationToken ct = default)
+    {
+        var filas = await db.Postulaciones.Where(p => p.Id == postulacionId && p.UsuarioId == usuarioId && !p.OcultaParaUsuario)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.OcultaParaUsuario, true), ct);
+        return filas == 1;
+    }
     private static IQueryable<Postulacion> SinDocumento(IQueryable<Postulacion> consulta) =>
         consulta.Select(p => new Postulacion
         {
@@ -108,7 +115,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         Guid usuarioId,
         CancellationToken cancellationToken = default)
     {
-        return SinDocumento(db.Postulaciones.AsNoTracking().Where(p => p.UsuarioId == usuarioId))
+        return SinDocumento(db.Postulaciones.AsNoTracking().Where(p => p.UsuarioId == usuarioId && !p.OcultaParaUsuario))
             .OrderByDescending(p => p.FechaPostulacion)
             .ToListAsync(cancellationToken);
     }

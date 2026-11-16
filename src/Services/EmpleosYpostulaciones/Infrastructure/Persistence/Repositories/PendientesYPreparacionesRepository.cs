@@ -42,7 +42,7 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             // Segundo control DENTRO del bloqueo: evita guardar un pendiente si
             // otro hilo acaba de confirmar la postulacion desde cualquier pantalla.
             if (await db.Postulaciones.AnyAsync(x =>
-                x.UsuarioId == pendiente.UsuarioId && x.EmpleoId == pendiente.EmpleoId, ct))
+                x.UsuarioId == pendiente.UsuarioId && x.EmpleoId == pendiente.EmpleoId && x.Estado != EstadoPostulacion.Retirada, ct))
                 throw PostulacionException.Duplicada();
             db.EmpleosPendientes.Add(pendiente);
             await db.SaveChangesAsync(ct);
@@ -142,7 +142,7 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             if (oferta.FechaCierre.HasValue && oferta.FechaCierre.Value <= DateTime.UtcNow)
                 throw PostulacionException.OfertaFinalizada();
             if (await db.Postulaciones.AsNoTracking().AnyAsync(p =>
-                p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId, ct))
+                p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId && p.Estado != EstadoPostulacion.Retirada, ct))
                 throw PostulacionException.Duplicada();
             // Solo la iniciativa IA autónoma requiere una oferta en la cola.
             // Una solicitud expresa del usuario no cambia su comportamiento.

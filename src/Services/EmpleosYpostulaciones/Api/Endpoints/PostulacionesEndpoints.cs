@@ -46,6 +46,15 @@ public static class PostulacionesEndpoints
                 PostulacionResponse.DesdeEntidad(postulacion));
         });
 
+        grupo.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal usuario,
+            PostulacionService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            return await servicio.OcultarParaUsuarioAsync(id, usuarioId, ct)
+                ? Results.NoContent() : Results.NotFound();
+        });
+
         grupo.MapGet("/me", async (
             ClaimsPrincipal usuario,
             PostulacionService servicio,

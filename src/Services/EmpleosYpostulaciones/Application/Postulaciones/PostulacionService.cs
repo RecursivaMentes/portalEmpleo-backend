@@ -109,6 +109,9 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
         return postulacion;
     }
     
+    public Task<bool> OcultarParaUsuarioAsync(Guid postulacionId, Guid usuarioId, CancellationToken ct = default) =>
+        repository.OcultarParaUsuarioAsync(postulacionId, usuarioId, ct);
+
     public async Task<List<PostulacionResponse>> ObtenerPorUsuarioAsync(
         Guid usuarioId,
         CancellationToken cancellationToken = default)
