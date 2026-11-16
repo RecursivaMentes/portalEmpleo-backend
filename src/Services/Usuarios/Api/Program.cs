@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Usuarios.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Application.Notificaciones;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -125,7 +126,11 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PerfilLaboralService>();
+
 builder.Services.AddScoped<CvService>();
+
+builder.Services.AddScoped<NotificacionService>();
+
 
 var issuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException("Falta Jwt:Issuer");
