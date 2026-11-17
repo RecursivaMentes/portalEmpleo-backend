@@ -27,7 +27,7 @@ public class RecomendacionesExceptionHandler : IExceptionHandler
                 // Respuestas HTTP fallidas o problemas de formato
                 // pueden distinguirse del servicio no disponible.
                 statusCode = StatusCodes.Status503ServiceUnavailable;
-                mensaje = $"El servicio de {ex.Servicio} no está disponible.";
+                mensaje = "No pudimos consultar las recomendaciones en este momento. Volvé a intentarlo más tarde.";
 
                 _logger.LogError(
                     exception,
@@ -63,7 +63,11 @@ public class RecomendacionesExceptionHandler : IExceptionHandler
             new
             {
                 mensaje,
-                codigo = statusCode
+                codigo = statusCode,
+                codigoError = exception is ServicioExternoException fallo
+                    ? "SERVICIO_" + fallo.Servicio.ToUpperInvariant() + "_NO_DISPONIBLE"
+                    : "RECOMENDACIONES_ERROR",
+                seguimientoId = httpContext.TraceIdentifier
             },
             cancellationToken
         );

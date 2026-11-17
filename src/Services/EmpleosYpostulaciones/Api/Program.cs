@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Application.Empleos;
 using Application.Postulaciones;
 using EmpleosYpostulaciones.Infrastructure.Clients;
+using EmpleosYpostulaciones.Infrastructure.Services;
+using EmpleosYpostulaciones.Api.Services;
 using EmpleosYpostulaciones.Infrastructure;
 using EmpleosYpostulaciones.Api.Endpoints;
 using EmpleosYpostulaciones.Api.Exceptions;
@@ -17,6 +19,58 @@ builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<EmpleoService>();
 builder.Services.AddScoped<PostulacionService>();
+builder.Services.AddScoped<SeguimientoPostulacionesService>();
+builder.Services.AddScoped<PendientesService>();
+builder.Services.AddScoped<PreparacionesService>();
+builder.Services.AddScoped<RevisionPreparacionesService>();
+builder.Services.AddScoped<OrdenamientoPendientesService>();
+builder.Services.AddScoped<ProcesamientoAutonomoService>();
+builder.Services.AddScoped<SolicitudUsuarioIAService>();
+builder.Services.AddScoped<AprobacionCvIAService>();
+builder.Services.AddScoped<RevisionIAService>();
+builder.Services.AddScoped<RevisionCvIAService>();
+builder.Services.AddScoped<ConsultasAutonomasHttpClient>();
+builder.Services.AddScoped<IConsultasProcesamientoInterno>(s => s.GetRequiredService<ConsultasAutonomasHttpClient>());
+builder.Services.AddScoped<IDatosExternosOrdenamientoInterno>(s => s.GetRequiredService<ConsultasAutonomasHttpClient>());
+builder.Services.AddHttpClient<IPreparadorPostulacionesIA, PreparadorIAChatbot>(client =>
+{
+    var url = builder.Configuration["Services:Chatbot:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Chatbot:BaseUrl");
+    client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(120);
+});
+builder.Services.AddHostedService<ProgramadorPostulaciones>();
+builder.Services.AddScoped<IDatosExternosOrdenamiento, DatosOrdenamientoHttpClient>();
+builder.Services.AddHttpClient("UsuariosOrdenPendientes", client =>
+{
+    client.BaseAddress = new Uri((builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl")).TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+builder.Services.AddHttpClient("RecomendacionesOrdenPendientes", client =>
+{
+    client.BaseAddress = new Uri((builder.Configuration["Services:Recomendaciones:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Recomendaciones:BaseUrl")).TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+builder.Services.AddHttpClient<IConsultaCvParaCompararIA, ConsultaCvComparacionIAClient>(client =>
+{
+    client.BaseAddress = new Uri((builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl")).TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddHttpClient<IAplicacionCvAprobado, AplicacionCvAprobadoClient>(client =>
+{
+    client.BaseAddress = new Uri((builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl")).TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHttpClient<ICopiaHistoricaCv, CopiaHistoricaCvClient>(client =>
+{
+    client.BaseAddress = new Uri((builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl")).TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(40);
+});
 builder.Services.AddHttpClient<ICvValidationClient, CvValidationHttpClient>(client =>
 {
     var baseUrl = builder.Configuration["Services:Usuarios:BaseUrl"]
@@ -25,6 +79,13 @@ builder.Services.AddHttpClient<ICvValidationClient, CvValidationHttpClient>(clie
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+builder.Services.AddHttpClient<IPerfilLaboralValidationClient, PerfilLaboralValidationHttpClient>(client =>
+{
+    var baseUrl = builder.Configuration["Services:Usuarios:BaseUrl"]
+        ?? throw new InvalidOperationException("Falta Services:Usuarios:BaseUrl");
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(
@@ -114,6 +175,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapEmpleosEndpoints();
+app.MapConsultaOfertaIAEndpoints();
 app.MapPostulacionesEndpoints();
+app.MapPendientesYPreparacionesEndpoints();
+app.MapConfiguracionInternaEndpoints();
 
 app.Run();

@@ -3,40 +3,75 @@ using Domain.Enums;
 
 namespace Application.Postulaciones;
 
-public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation)
+public class PostulacionService(IPostulacionRepository repository, ICvValidationClient cvValidation,
+    IPerfilLaboralValidationClient perfilValidation, IConsultasProcesamientoInterno? validacionInterna = null,
+    ICopiaHistoricaCv? copiaHistorica = null)
 {
     public async Task<Postulacion> CrearAsync(
         CrearPostulacionRequest request,
         string token,
         CancellationToken cancellationToken = default)
     {
+        var creada = await ValidarYConstruirAsync(request, token, cancellationToken);
+        await repository.AgregarAsync(creada, cancellationToken);
+        return creada;
+    }
+
+    // Misma regla de negocio para usuario autenticado e integracion interna.
+    public Task<Postulacion> ValidarYConstruirAsync(
+        CrearPostulacionRequest request, string token, CancellationToken cancellationToken = default) =>
+        ValidarYConstruirComunAsync(request,
+            ct => perfilValidation.ValidarAsync(token, ct),
+            ct => cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, ct), cancellationToken);
+
+    public Task<Postulacion> ValidarYConstruirInternoAsync(
+        CrearPostulacionRequest request, CancellationToken cancellationToken = default,
+        long? versionCvEsperada = null)
+    {
+        if (validacionInterna is null) throw new InvalidOperationException("Falta validacion interna.");
+        return ValidarYConstruirComunAsync(request,
+            async ct => await validacionInterna.ValidarPerfilAsync(request.UsuarioId, ct)
+                ?? throw PostulacionException.PerfilIncompleto(null),
+            ct => validacionInterna.ValidarCvAsync(request.UsuarioId, request.CvId, ct),
+            cancellationToken, versionCvEsperada);
+    }
+
+    private async Task<Postulacion> ValidarYConstruirComunAsync(
+        CrearPostulacionRequest request,
+        Func<CancellationToken, Task<ValidacionPerfilLaboralResultado>> validarPerfil,
+        Func<CancellationToken, Task<bool>> validarCv,
+        CancellationToken cancellationToken, long? versionCvEsperada = null)
+    {
         if (request.UsuarioId == Guid.Empty ||
             request.EmpleoId == Guid.Empty ||
             request.CvId == Guid.Empty)
         {
-            throw new ArgumentException(
-                "UsuarioId, EmpleoId y CvId son obligatorios.");
+            throw PostulacionException.DatosInvalidos();
         }
+
+        if (request.TextoPresentacion is { Length: > 4000 })
+            throw PostulacionException.PresentacionInvalida();
 
         var empleo = await repository.ObtenerEmpleoAsync(
             request.EmpleoId, cancellationToken);
 
         if (empleo is null)
-            throw new KeyNotFoundException("La oferta laboral no existe.");
+            throw PostulacionException.OfertaNoEncontrada();
 
         if (empleo.Estado != EstadoEmpleo.Publicado)
-            throw new InvalidOperationException(
-                "La oferta laboral no está publicada.");
+            throw PostulacionException.OfertaNoDisponible();
 
         if (empleo.FechaCierre.HasValue &&
             empleo.FechaCierre.Value <= DateTime.UtcNow)
         {
-            throw new InvalidOperationException(
-                "La oferta laboral ya finalizó.");
+            throw PostulacionException.OfertaFinalizada();
         }
 
-        if (!await cvValidation.PerteneceAlUsuarioAsync(request.CvId, token, cancellationToken))
-            throw new KeyNotFoundException("El CV no existe o no pertenece al usuario.");
+        var validacionPerfil = await validarPerfil(cancellationToken);
+        if (!validacionPerfil.PerfilCompleto)
+            throw PostulacionException.PerfilIncompleto(validacionPerfil.Faltantes);
+        if (!await validarCv(cancellationToken))
+            throw PostulacionException.CvNoEncontrado();
 
         bool yaPostulado = await repository.ExistePostulacionAsync(
             request.UsuarioId,
@@ -44,7 +79,7 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             cancellationToken);
 
         if (yaPostulado)
-            throw new InvalidOperationException("El usuario ya se postulo a esta oferta.");
+            throw PostulacionException.Duplicada();
 
         var postulacion = new Postulacion
         {
@@ -54,15 +89,30 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
             CvId = request.CvId,
             TextoPresentacion = request.TextoPresentacion,
             Estado = EstadoPostulacion.Pendiente,
-            FechaPostulacion = DateTime.UtcNow
+            FechaPostulacion = DateTime.UtcNow,
+            HistorialEstadosJson = System.Text.Json.JsonSerializer.Serialize(new[]
+            {
+                new { estado = "Pendiente", fechaUtc = DateTime.UtcNow }
+            })
         };
 
-        await repository.AgregarAsync(postulacion, cancellationToken);
-
+        // Se adjunta la copia vigente ANTES de insertar Postulacion. Ningun envio sin documento.
+        // En tests antiguos el adaptador es opcional; en el host API se registra obligatoriamente.
+        if (copiaHistorica is not null)
+        {
+            var documento = await copiaHistorica.ObtenerVersionAsync(request.UsuarioId, request.CvId,
+                versionCvEsperada, cancellationToken);
+            postulacion.CvDocumentoEnviado = documento.Contenido;
+            postulacion.CvDocumentoMime = documento.Mime;
+            postulacion.CvDocumentoNombre = documento.Nombre;
+        }
         return postulacion;
     }
     
-    public async Task<List<Postulacion>> ObtenerPorUsuarioAsync(
+    public Task<bool> OcultarParaUsuarioAsync(Guid postulacionId, Guid usuarioId, CancellationToken ct = default) =>
+        repository.OcultarParaUsuarioAsync(postulacionId, usuarioId, ct);
+
+    public async Task<List<PostulacionResponse>> ObtenerPorUsuarioAsync(
         Guid usuarioId,
         CancellationToken cancellationToken = default)
     {
@@ -72,8 +122,23 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
                 "El identificador del usuario es obligatorio.");
         }
 
-        return await repository.ObtenerPorUsuarioAsync(
-            usuarioId,
-            cancellationToken);
+        var postulaciones = await repository.ObtenerPorUsuarioAsync(
+            usuarioId, cancellationToken);
+        return postulaciones.Select(PostulacionResponse.DesdeEntidad).ToList();
+    }
+
+    public async Task<PostulacionResponse?> ObtenerPorIdAsync(
+        Guid postulacionId,
+        Guid usuarioId,
+        CancellationToken cancellationToken = default)
+    {
+        if (postulacionId == Guid.Empty || usuarioId == Guid.Empty)
+            throw new ArgumentException("Los identificadores de postulación y usuario son obligatorios.");
+
+        var postulacion = await repository.ObtenerPorIdAsync(postulacionId, cancellationToken);
+        if (postulacion is null || postulacion.UsuarioId != usuarioId)
+            return null;
+
+        return PostulacionResponse.DesdeEntidad(postulacion);
     }
 }

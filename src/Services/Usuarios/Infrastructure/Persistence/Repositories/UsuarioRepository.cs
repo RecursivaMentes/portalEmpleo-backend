@@ -1,4 +1,4 @@
-﻿using Npgsql;
+using Npgsql;
 using System.Data;
 using Application.Auth;
 using Domain.Entities;
@@ -46,6 +46,12 @@ public class UsuarioRepository(AppDbContext db) : IUsuarioRepository
             throw new DuplicateNameException("El correo ya existe.", ex);
         }
     }
+
+    public Task ActualizarPreferenciasLaboralesAsync(Guid usuarioId, string preferenciasJson,
+        CancellationToken cancellationToken = default) =>
+        db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE usuarios SET \"PreferenciasJson\" = jsonb_set(COALESCE(\"PreferenciasJson\", '{{}}'::jsonb), '{{preferenciasLaborales}}', CAST({preferenciasJson} AS jsonb), true) WHERE \"Id\" = {usuarioId} AND \"Estado\" = TRUE",
+            cancellationToken);
 
     public async Task UpdateAsync(
         Usuario usuario,

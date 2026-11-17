@@ -22,6 +22,42 @@ namespace Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entities.ConfiguracionOperativaPostulacion", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CompatibilidadMinima")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LimiteDiario")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Modo")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<string>("OrdenPendientes")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ZonaHoraria")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("UsuarioId");
+
+                    b.ToTable("configuraciones_postulacion", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Empleo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -90,11 +126,76 @@ namespace Infrastructure.Migrations
                     b.ToTable("empleos", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.EmpleoPendiente", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EmpleoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaAgregado")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UsuarioId", "EmpleoId");
+
+                    b.HasIndex("EmpleoId");
+
+                    b.ToTable("empleos_pendientes", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.IntentoPostulacionIA", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EmpleoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("PreparacionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Resultado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "FechaUtc");
+
+                    b.HasIndex("UsuarioId", "EmpleoId", "FechaUtc");
+
+                    b.ToTable("intentos_postulacion_ia", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Postulacion", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<byte[]>("CvDocumentoEnviado")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("CvDocumentoMime")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("CvDocumentoNombre")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<Guid>("CvId")
                         .HasColumnType("uuid");
@@ -118,6 +219,14 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<bool>("OcultaParaUsuario")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<bool>("RequiereAprobacion")
                         .HasColumnType("boolean");
 
@@ -140,6 +249,133 @@ namespace Infrastructure.Migrations
                     b.ToTable("postulaciones", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.PreparacionPostulacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CambiosPendientes")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ContabilizadaEnCupo")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("CvId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CvIdPropuesto")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CvNuevoIAPropuesto")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CvTextoIAPropuesto")
+                        .HasMaxLength(50000)
+                        .HasColumnType("character varying(50000)");
+
+                    b.Property<string>("CvTituloIAPropuesto")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<long?>("CvVersionIAOriginal")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("EmpleoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaContabilizacionUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModoEjecucion")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid?>("PostulacionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TextoPresentacion")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("TextoPresentacionPropuesto")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("UltimoError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("VersionEdicion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpleoId");
+
+                    b.HasIndex("PostulacionId");
+
+                    b.HasIndex("UsuarioId")
+                        .IsUnique()
+                        .HasFilter("\"Estado\" IN ('Preparando', 'EnModificacion', 'AplicandoCv', 'Enviando', 'CancelacionSolicitada')");
+
+                    b.HasIndex("UsuarioId", "EmpleoId")
+                        .IsUnique()
+                        .HasFilter("\"Estado\" IN ('Preparando', 'EnModificacion', 'PendienteAprobacionCv', 'AplicandoCv', 'PendienteAprobacion', 'Enviando', 'CancelacionSolicitada')");
+
+                    b.HasIndex("UsuarioId", "FechaContabilizacionUtc");
+
+                    b.ToTable("preparaciones_postulacion", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.ReservaCambioUsuario", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiraUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OperacionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UsuarioId");
+
+                    b.HasIndex("ExpiraUtc");
+
+                    b.ToTable("reservas_cambio_usuario", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.EmpleoPendiente", b =>
+                {
+                    b.HasOne("Domain.Entities.Empleo", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Domain.Entities.Postulacion", b =>
                 {
                     b.HasOne("Domain.Entities.Empleo", "Empleo")
@@ -149,6 +385,20 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Empleo");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PreparacionPostulacion", b =>
+                {
+                    b.HasOne("Domain.Entities.Empleo", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Postulacion", null)
+                        .WithMany()
+                        .HasForeignKey("PostulacionId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Domain.Entities.Empleo", b =>

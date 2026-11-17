@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Enums;
 
 namespace Application.Postulaciones;
 
@@ -17,6 +18,9 @@ public interface IPostulacionRepository
         Postulacion postulacion,
         CancellationToken cancellationToken = default);
 
+    Task<bool> OcultarParaUsuarioAsync(Guid postulacionId, Guid usuarioId, CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
     Task<List<Postulacion>> ObtenerPorUsuarioAsync(
         Guid usuarioId,
         CancellationToken cancellationToken = default);
@@ -24,4 +28,16 @@ public interface IPostulacionRepository
     Task<Postulacion?> ObtenerPorIdAsync(
         Guid postulacionId,
         CancellationToken cancellationToken = default);
+
+    // La copia historica se entrega al postulante o al propietario de la oferta.
+    Task<CopiaHistoricaCv?> ObtenerDocumentoEnviadoAsync(Guid postulacionId,
+        Guid actorId, CancellationToken ct = default) =>
+        throw new NotSupportedException("Consulta de documento historico no implementada.");
+
+    Task<List<Postulacion>?> ObtenerPorOfertaParaEmpresaAsync(Guid empleoId,
+        Guid propietarioOfertaId, CancellationToken ct = default) =>
+        throw new NotSupportedException("El repositorio no implementa consulta de empresa.");
+    Task<Postulacion?> CambiarEstadoAsync(Guid postulacionId, Guid actorId,
+        EstadoPostulacion nuevo, CancellationToken ct = default) =>
+        throw new NotSupportedException("El repositorio no implementa cambios de estado.");
 }

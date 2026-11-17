@@ -8,12 +8,18 @@ public class Postulacion
     public Guid UsuarioId { get; set; }
     public Guid EmpleoId { get; set; }
     public Guid CvId { get; set; }
+    public byte[]? CvDocumentoEnviado { get; set; }
+    public string? CvDocumentoMime { get; set; }
+    public string? CvDocumentoNombre { get; set; }
+    // Manual, Automatica, Asistida o SolicitudUsuario.
+    public string Origen { get; set; } = "Manual";
     public EstadoPostulacion Estado { get; set; } = EstadoPostulacion.Pendiente;
     public string? Observaciones { get; set; }
     public string? TextoPresentacion { get; set; }
     public bool RequiereAprobacion { get; set; }
     public string HistorialEstadosJson { get; set; } = "[]";
     public DateTime FechaPostulacion { get; set; } = DateTime.UtcNow;
+    public bool OcultaParaUsuario { get; set; }
 
     public Empleo Empleo { get; set; } = null!;
 }
