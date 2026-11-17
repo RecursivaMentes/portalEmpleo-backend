@@ -29,8 +29,8 @@ public class AuthController(AuthService authService) : ControllerBase
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true, // Protege el token contra ataques XSS
-            Secure = true,   // Requiere HTTPS
-            SameSite = SameSiteMode.Strict, // Cambia a SameSiteMode.None si el front está en otro dominio/puerto
+            Secure = false,   // permite http en desarrollo
+            SameSite = SameSiteMode.Lax, // Necesario porque SameSite=None exige Secure=true
             Expires = response.ExpiresAtUtc
         };
 
@@ -47,8 +47,8 @@ public class AuthController(AuthService authService) : ControllerBase
         Response.Cookies.Delete("AuthToken", new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict // Igual que en Login
+            Secure = false,
+            SameSite = SameSiteMode.Lax // Igual que en Login
         });
 
         return Ok(new { message = "Sesión cerrada correctamente." });
