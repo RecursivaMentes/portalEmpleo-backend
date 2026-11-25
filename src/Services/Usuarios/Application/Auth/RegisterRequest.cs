@@ -9,8 +9,8 @@ public record RegisterRequest(
     string Email,
 
     [param: Required(ErrorMessage = "Debe ingresar una contraseña.")]
-    [param: MinLength(8,ErrorMessage = "Debe ingresar al menos 8 caracteres.")]
-    [param: MaxLength(128, ErrorMessage = "La contraseña es demasiado larga.")]
+    [param: MinLength(PasswordPolicy.MinLength,ErrorMessage = "Debe ingresar al menos 8 caracteres.")]
+    [param: MaxLength(PasswordPolicy.MaxLength, ErrorMessage = "La contraseña es demasiado larga.")]
     string Password,
 
     [param: Required(ErrorMessage = "Debe ingresar su nombre.")]

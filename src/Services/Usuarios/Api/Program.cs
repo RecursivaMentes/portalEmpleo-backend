@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using Application.Auth;
 using Application.Cvs;
 using Application.PerfilLaboral;
@@ -8,6 +9,9 @@ using System.Text.RegularExpressions;
 using Usuarios.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.DataProtection;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,9 +25,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(builder.Configuration["Frontend:Origin"] ?? "http://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials(); //para usar cookies
     });
 });
 // Solo cambia el formato de los errores automáticos de validación del perfil laboral.
@@ -126,6 +131,17 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 
+var keysPath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "PortalEmpleo",
+    "DataProtectionKeys");
+
+Directory.CreateDirectory(keysPath);
+
+builder.Services.AddDataProtection()
+    .SetApplicationName("PortalEmpleo")
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PerfilLaboralService>();
@@ -173,6 +189,7 @@ builder.Services
         // Los endpoints de perfil laboral devuelven mensajes comprensibles al usuario.
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context => { context.Token = AuthenticatedToken.Read(context.Request); return Task.CompletedTask; },
             OnChallenge = context =>
             {
                 if (!context.Request.Path.StartsWithSegments("/api/perfil-laboral"))
@@ -201,6 +218,26 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("password-recovery", context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ip,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -212,9 +249,11 @@ app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
 
+app.UseCookieCsrfProtection(builder.Configuration);
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

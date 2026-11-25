@@ -1,13 +1,14 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Application.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Usuarios.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AuthService authService) : ControllerBase
+public class AuthController(AuthService authService, IWebHostEnvironment environment) : ControllerBase
 {
     [HttpPost("login")]
     public async Task<IActionResult> Login(
@@ -25,8 +26,34 @@ public class AuthController(AuthService authService) : ControllerBase
             });
         }
 
-        return Ok(response);
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true, // Protege el token contra ataques XSS
+            Secure = !environment.IsDevelopment(),   // Requiere HTTPS
+            SameSite = SameSiteMode.Lax, // Cambia a SameSiteMode.None si el front está en otro dominio/puerto
+            Expires = response.ExpiresAtUtc
+        };
+
+        Response.Cookies.Append("AuthToken", response.AccessToken, cookieOptions);
+
+        return Ok(new { message = "Sesión iniciada correctamente." });
     }
+
+    [AllowAnonymous]
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        // Debe coincidir con las opciones de SameSite/Secure usadas al crearla
+        Response.Cookies.Delete("AuthToken", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !environment.IsDevelopment(),
+            SameSite = SameSiteMode.Lax // Igual que en Login
+        });
+
+        return Ok(new { message = "Sesión cerrada correctamente." });
+    }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register(
         [FromBody] RegisterRequest request,
@@ -93,5 +120,148 @@ public class AuthController(AuthService authService) : ControllerBase
             return NotFound(new { message = "Usuario no encontrado." });
 
         return Ok(perfil);
+    }
+
+    [Authorize]
+    [HttpPut("change-password")]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Token inválido."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(request.NewPassword) ||
+            string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        {
+            return BadRequest(new
+            {
+                message = "Todos los campos son obligatorios."
+            });
+        }
+
+        if (request.NewPassword != request.ConfirmPassword)
+        {
+            return BadRequest(new
+            {
+                message = "Las contraseñas nuevas no coinciden."
+            });
+        }
+
+        if (!PasswordPolicy.IsValid(request.NewPassword))
+        {
+            return BadRequest(new
+            {
+                message = "La nueva contraseña debe tener entre 8 y 128 caracteres."
+            });
+        }
+
+        if (request.CurrentPassword == request.NewPassword)
+        {
+            return BadRequest(new
+            {
+                message = "La nueva contraseña debe ser diferente a la actual."
+            });
+        }
+
+        var success = await authService.ChangePasswordAsync(
+            userId,
+            request,
+            cancellationToken);
+
+        if (!success)
+        {
+            return BadRequest(new
+            {
+                message = "No se pudo cambiar la contraseña. Verificá la contraseña actual y que la nueva sea diferente."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Contraseña actualizada correctamente."
+        });
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("password-recovery")]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new
+            {
+                message = "Ingresá tu correo electrónico."
+            });
+
+        await authService.ForgotPasswordAsync(
+            request,
+            cancellationToken);
+
+        return Ok(new
+        {
+            message = "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Token) ||
+            string.IsNullOrWhiteSpace(request.NewPassword) ||
+            string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        {
+            return BadRequest(new
+            {
+                message = "Todos los campos son obligatorios."
+            });
+        }
+
+        if (request.NewPassword != request.ConfirmPassword)
+        {
+            return BadRequest(new
+            {
+                message = "Las contraseñas no coinciden."
+            });
+        }
+
+        if (!PasswordPolicy.IsValid(request.NewPassword))
+        {
+            return BadRequest(new
+            {
+                message = "La contraseña debe tener entre 8 y 128 caracteres."
+            });
+        }
+
+        var success = await authService.ResetPasswordAsync(
+            request,
+            cancellationToken);
+
+        if (!success)
+        {
+            return BadRequest(new
+            {
+                message = "El enlace de recuperación no es válido o ha vencido."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Contraseña restablecida correctamente."
+        });
     }
 }

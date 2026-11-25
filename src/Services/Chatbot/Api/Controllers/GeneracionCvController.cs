@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using Application.Chats;
 using Application.Cvs;
 using Microsoft.AspNetCore.Authorization;
@@ -62,10 +63,6 @@ public class GeneracionCvController(GeneracionCvService generacion, ILogger<Gene
 
     private string ObtenerAccessToken()
     {
-        var header = Request.Headers.Authorization.ToString();
-
-        return header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? header["Bearer ".Length..].Trim()
-            : string.Empty;
+        return AuthenticatedToken.Read(Request) ?? string.Empty;
     }
 }

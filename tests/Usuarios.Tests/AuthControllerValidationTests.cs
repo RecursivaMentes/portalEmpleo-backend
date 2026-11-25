@@ -21,7 +21,9 @@ public class AuthControllerValidationTests
         var controller = new AuthController(new AuthService(
             new RepositorioUsuarioDePrueba(),
             new PasswordDePrueba(),
-            new TokenDePrueba()));
+            new TokenDePrueba(),
+            new ResetTokenDePrueba(),
+            new EmailDePrueba()), new EntornoDePrueba());
 
         var http = new DefaultHttpContext { RequestServices = proveedor };
         http.User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -77,6 +79,11 @@ public class AuthControllerValidationTests
             => Task.CompletedTask;
         public Task UpdateAsync(Usuario usuario, CancellationToken ct = default)
             => Task.CompletedTask;
+        public Task ActualizarPreferenciasLaboralesAsync(Guid usuarioId, string preferenciasJson,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<bool> UpdatePasswordIfUnchangedAsync(Guid userId, string currentPasswordHash,
+            string newPasswordHash, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 
     private sealed class PasswordDePrueba : IPasswordService
@@ -89,5 +96,30 @@ public class AuthControllerValidationTests
     {
         public TokenResult GenerateToken(Usuario usuario)
             => throw new NotSupportedException();
+    }
+
+    private sealed class ResetTokenDePrueba : IPasswordResetTokenService
+    {
+        public string GenerateToken(Guid userId, string passwordHash)
+            => throw new NotSupportedException();
+        public bool ValidateToken(string token, Guid userId, string passwordHash)
+            => false;
+    }
+
+    private sealed class EmailDePrueba : IEmailService
+    {
+        public Task SendPasswordResetEmailAsync(string email, string resetLink,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+    private sealed class EntornoDePrueba : Microsoft.AspNetCore.Hosting.IWebHostEnvironment
+    {
+        public string ApplicationName { get; set; } = "Usuarios.Tests";
+        public string EnvironmentName { get; set; } = "Development";
+        public string ContentRootPath { get; set; } = ".";
+        public string WebRootPath { get; set; } = ".";
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; }
+            = new Microsoft.Extensions.FileProviders.NullFileProvider();
+        public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; }
+            = new Microsoft.Extensions.FileProviders.NullFileProvider();
     }
 }

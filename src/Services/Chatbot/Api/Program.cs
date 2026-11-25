@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using Application.Chats;
 using Application.Postulaciones;
 using Application.Herramientas;
@@ -76,9 +77,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(builder.Configuration["Frontend:Origin"] ?? "http://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();//para cookie
     });
 });
 
@@ -120,6 +122,10 @@ builder.Services
             NameClaimType = "sub",
             RoleClaimType = "role"
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context => { context.Token = AuthenticatedToken.Read(context.Request); return Task.CompletedTask; }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -135,6 +141,7 @@ app.UseHttpsRedirection();
 
 app.UseCors("Frontend");
 
+app.UseCookieCsrfProtection(builder.Configuration);
 app.UseAuthentication();
 app.UseAuthorization();
 

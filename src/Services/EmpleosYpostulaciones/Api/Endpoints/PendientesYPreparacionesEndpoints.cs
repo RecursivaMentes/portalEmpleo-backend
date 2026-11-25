@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using System.Security.Claims;
 using Application.Postulaciones;
 
@@ -8,13 +9,7 @@ public static class PendientesYPreparacionesEndpoints
     public sealed record AgregarPendienteRequest(Guid EmpleoId);
     public sealed record SolicitarCambiosIARequest(int VersionEdicion, string Instrucciones);
 
-    private static string? Token(HttpRequest solicitud)
-    {
-        var autorizacion = solicitud.Headers.Authorization.ToString();
-        if (!autorizacion.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return null;
-        var token = autorizacion["Bearer ".Length..].Trim();
-        return string.IsNullOrEmpty(token) ? null : token;
-    }
+    private static string? Token(HttpRequest solicitud) { return AuthenticatedToken.Read(solicitud); }
 
     public static void MapPendientesYPreparacionesEndpoints(this WebApplication app)
     {
