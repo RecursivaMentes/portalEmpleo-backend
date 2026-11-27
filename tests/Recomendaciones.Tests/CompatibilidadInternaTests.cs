@@ -41,6 +41,13 @@ public sealed class CompatibilidadInternaTests
         Assert.Equal(empleo, oferta.EmpleoId);
         Assert.Equal(66.67m, oferta.Score);
         Assert.Contains("Docker", oferta.RequisitosFaltantes);
+
+        var aceptadas = await servicio.AnalizarInternoAsync(usuario, "clave-prueba", compatibilidadMinima: 66);
+        Assert.Single(aceptadas!);
+        var rechazadas = await servicio.AnalizarInternoAsync(usuario, "clave-prueba", compatibilidadMinima: 67);
+        Assert.Empty(rechazadas!);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            servicio.AnalizarInternoAsync(usuario, "clave-prueba", compatibilidadMinima: 101));
     }
 
     private static HttpResponseMessage Json(string json) =>
