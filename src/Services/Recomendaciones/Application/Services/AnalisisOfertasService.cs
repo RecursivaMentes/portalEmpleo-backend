@@ -66,8 +66,11 @@ public class AnalisisOfertasService
 
     // Consultas autenticadas entre microservicios; no dependen del JWT del usuario.
     public async Task<List<CompatibilidadResponse>?> AnalizarInternoAsync(
-        Guid usuarioId, string claveInterna, CancellationToken ct = default)
+        Guid usuarioId, string claveInterna, CancellationToken ct = default,
+        int? compatibilidadMinima = null)
     {
+        if (compatibilidadMinima is < 1 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(compatibilidadMinima));
         var perfil = await _usuariosClient.ObtenerPerfilInternoAsync(usuarioId, claveInterna, ct);
         if (perfil is null) return null;
         var habilidades = perfil.Habilidades
@@ -84,7 +87,8 @@ public class AnalisisOfertasService
                 Habilidades = habilidades, Requisitos = empleo.Requisitos
             });
             resultado.Titulo = empleo.Titulo;
-            resultados.Add(resultado);
+            if (!compatibilidadMinima.HasValue || resultado.Score >= compatibilidadMinima.Value)
+                resultados.Add(resultado);
         }
         return resultados.OrderByDescending(x => x.Score).ToList();
     }

@@ -8,6 +8,12 @@ public interface IPendientesYPreparacionesRepository
     Task<List<EmpleoPendiente>> ListarPendientesAsync(Guid usuarioId, CancellationToken ct = default);
     Task AgregarPendienteAsync(EmpleoPendiente pendiente, CancellationToken ct = default);
     Task EliminarPendienteAsync(EmpleoPendiente pendiente, CancellationToken ct = default);
+    Task<List<Guid>> ListarDescartadasAsync(Guid usuarioId, CancellationToken ct = default) =>
+        Task.FromResult(new List<Guid>());
+    Task DescartarOfertaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
+        throw new NotSupportedException("El repositorio no admite exclusión explícita de ofertas.");
+    Task RestaurarOfertaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
+        throw new NotSupportedException("El repositorio no admite restaurar ofertas.");
 
     Task<List<PreparacionPostulacion>> ListarPreparacionesAsync(Guid usuarioId, CancellationToken ct = default);
     Task<PreparacionPostulacion?> ObtenerPreparacionAsync(Guid id, Guid usuarioId, CancellationToken ct = default);

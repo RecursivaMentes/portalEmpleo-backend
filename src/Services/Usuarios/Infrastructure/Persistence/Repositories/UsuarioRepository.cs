@@ -61,4 +61,23 @@ public class UsuarioRepository(AppDbContext db) : IUsuarioRepository
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> UpdatePasswordIfUnchangedAsync(
+        Guid userId,
+        string currentPasswordHash,
+        string newPasswordHash,
+        CancellationToken cancellationToken = default)
+    {
+        var updatedRows = await db.Usuarios
+            .Where(u =>
+                u.Id == userId &&
+                u.PasswordHash == currentPasswordHash &&
+                u.Estado)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    u => u.PasswordHash,
+                    newPasswordHash),
+                cancellationToken);
+
+        return updatedRows == 1;
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Domain.Enums;
 using Application.Auth;
 using Domain.Entities;
@@ -7,7 +7,9 @@ namespace Application.Auth;
 public class AuthService(
     IUsuarioRepository usuarios,
     IPasswordService passwords,
-    ITokenService tokens)
+    ITokenService tokens,
+    IPasswordResetTokenService passwordResetTokens,
+    IEmailService emailService)
 {
     public async Task<LoginResponse?> LoginAsync(
         LoginRequest request,
@@ -104,5 +106,94 @@ public class AuthService(
             usuario.Telefono,
             usuario.PreferenciasJson,
             usuario.ReglasPostulacion);
+    }
+
+    public async Task<bool> ChangePasswordAsync(
+        Guid userId,
+        ChangePasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await usuarios.GetByIdAsync(
+            userId,
+            cancellationToken);
+
+        if (user is null || !user.Estado)
+            return false;
+
+        if (!passwords.VerifyPassword(
+            user.PasswordHash,
+            request.CurrentPassword))
+            return false;
+
+        if (passwords.VerifyPassword(
+            user.PasswordHash,
+            request.NewPassword))
+            return false;
+
+        user.PasswordHash = passwords.HashPassword(
+            request.NewPassword);
+
+        await usuarios.UpdateAsync(
+            user,
+            cancellationToken);
+
+        return true;
+    }
+
+    public async Task ForgotPasswordAsync(
+        ForgotPasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var usuario = await usuarios.GetByEmailAsync(
+            request.Email,
+            cancellationToken);
+
+        if (usuario is null || !usuario.Estado)
+            return;
+
+        var token = passwordResetTokens.GenerateToken(
+            usuario.Id,
+            usuario.PasswordHash);
+
+        var resetLink =
+            (Environment.GetEnvironmentVariable("PORTAL_FRONTEND_URL") ?? throw new InvalidOperationException("Falta PORTAL_FRONTEND_URL para recuperar contraseñas.")).TrimEnd('/') + "/restablecer-contrasena" +
+            $"?email={Uri.EscapeDataString(usuario.Email)}" +
+            $"&token={Uri.EscapeDataString(token)}";
+
+        await emailService.SendPasswordResetEmailAsync(
+            usuario.Email,
+            resetLink,
+            cancellationToken);
+    }
+
+    public async Task<bool> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var usuario = await usuarios.GetByEmailAsync(
+            request.Email,
+            cancellationToken);
+
+        if (usuario is null || !usuario.Estado)
+            return false;
+
+        if (!passwordResetTokens.ValidateToken(
+            request.Token,
+            usuario.Id,
+            usuario.PasswordHash))
+            return false;
+
+        if (passwords.VerifyPassword(
+            usuario.PasswordHash,
+            request.NewPassword))
+            return false;
+
+        var newPasswordHash = passwords.HashPassword(request.NewPassword);
+
+        return await usuarios.UpdatePasswordIfUnchangedAsync(
+            usuario.Id,
+            usuario.PasswordHash,
+            newPasswordHash,
+            cancellationToken);
     }
 }

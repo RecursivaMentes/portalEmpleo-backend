@@ -104,7 +104,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         consulta.Select(p => new Postulacion
         {
             Id = p.Id, UsuarioId = p.UsuarioId, EmpleoId = p.EmpleoId,
-            CvId = p.CvId, Estado = p.Estado, Origen = p.Origen,
+            CvId = p.CvId, Estado = p.Estado, Origen = p.Origen, FuenteOferta = p.FuenteOferta,
             TextoPresentacion = p.TextoPresentacion, Observaciones = p.Observaciones,
             RequiereAprobacion = p.RequiereAprobacion,
             HistorialEstadosJson = p.HistorialEstadosJson,

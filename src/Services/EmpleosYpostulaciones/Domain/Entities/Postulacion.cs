@@ -13,6 +13,7 @@ public class Postulacion
     public string? CvDocumentoNombre { get; set; }
     // Manual, Automatica, Asistida o SolicitudUsuario.
     public string Origen { get; set; } = "Manual";
+    public string? FuenteOferta { get; set; }
     public EstadoPostulacion Estado { get; set; } = EstadoPostulacion.Pendiente;
     public string? Observaciones { get; set; }
     public string? TextoPresentacion { get; set; }

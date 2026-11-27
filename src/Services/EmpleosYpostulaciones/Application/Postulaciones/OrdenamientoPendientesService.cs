@@ -32,6 +32,8 @@ public sealed record PendienteOrdenadoResponse(
     public string? EstadoPreparacion { get; init; }
 }
 
+public sealed record CandidatoPostulacionIA(Guid EmpleoId, decimal Compatibilidad, string FuenteOferta);
+
 public interface IOrdenamientoPendientesRepository
 {
     Task<List<OfertaPendienteDatos>> ObtenerPendientesAsync(Guid usuarioId, CancellationToken ct = default);
@@ -67,6 +69,35 @@ public sealed class OrdenamientoPendientesService(
         if (ofertas.Count == 0) return [];
         return await AdjuntarEstadoAsync(usuarioId,
             Ordenar(ofertas, await internos.ObtenerInternoAsync(usuarioId, ct), DateTime.UtcNow), ct);
+    }
+
+    public async Task<List<CandidatoPostulacionIA>> ListarCandidatosInternosAsync(Guid usuarioId,
+        int compatibilidadMinima, CancellationToken ct = default)
+    {
+        if (internos is null) throw new InvalidOperationException("Ordenamiento interno no configurado.");
+        if (compatibilidadMinima is < 1 or > 100) throw PostulacionException.DatosInvalidos();
+        var guardadas = await pendientes.ObtenerPendientesAsync(usuarioId, ct);
+        var datos = await internos.ObtenerInternoAsync(usuarioId, compatibilidadMinima, ct);
+        var descartadas = preparaciones is null ? new HashSet<Guid>() :
+            (await preparaciones.ListarDescartadasAsync(usuarioId, ct)).ToHashSet();
+        return SeleccionarCandidatos(guardadas, datos, descartadas, compatibilidadMinima, DateTime.UtcNow);
+    }
+
+    public static List<CandidatoPostulacionIA> SeleccionarCandidatos(
+        IReadOnlyList<OfertaPendienteDatos> guardadas, DatosExternosOrdenamiento datos,
+        IReadOnlySet<Guid> descartadas, int compatibilidadMinima, DateTime ahora)
+    {
+        var idsGuardadas = guardadas.Select(x => x.EmpleoId).ToHashSet();
+        bool ScoreValido(Guid id) => datos.Compatibilidades.TryGetValue(id, out var score) &&
+            score >= compatibilidadMinima && score <= 100m && !descartadas.Contains(id);
+        var candidatos = Ordenar(guardadas, datos, ahora)
+            .Where(x => x.Disponible && ScoreValido(x.EmpleoId))
+            .Select(x => new CandidatoPostulacionIA(x.EmpleoId, x.Compatibilidad!.Value,
+                PreparacionPostulacion.FuentePendientes)).ToList();
+        candidatos.AddRange(datos.Compatibilidades.Where(x => !idsGuardadas.Contains(x.Key) && ScoreValido(x.Key))
+            .OrderByDescending(x => x.Value).ThenBy(x => x.Key)
+            .Select(x => new CandidatoPostulacionIA(x.Key, x.Value, PreparacionPostulacion.FuenteRecomendaciones)));
+        return candidatos;
     }
 
     private async Task<List<PendienteOrdenadoResponse>> AdjuntarEstadoAsync(

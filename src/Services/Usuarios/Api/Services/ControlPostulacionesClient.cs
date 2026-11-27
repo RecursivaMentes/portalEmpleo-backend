@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -16,13 +17,16 @@ public sealed class ControlPostulacionesClient(HttpClient http, IConfiguration c
     {
         var destino = config["Services:EmpleosYpostulaciones:BaseUrl"];
         if (string.IsNullOrWhiteSpace(destino))
-            throw new InvalidOperationException("Falta configurar la conexión a Postulaciones.");
-        var bearer = contexto.HttpContext?.Request.Headers.Authorization.ToString();
-        if (string.IsNullOrWhiteSpace(bearer) ||
-            !bearer.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            throw new UnauthorizedAccessException("La sesión no está disponible.");
+            throw new InvalidOperationException("Falta configurar la conexion a Postulaciones.");
+
+        var token = contexto.HttpContext is null
+            ? null
+            : AuthenticatedToken.Read(contexto.HttpContext.Request);
+        if (string.IsNullOrWhiteSpace(token))
+            throw new UnauthorizedAccessException("La sesion no esta disponible.");
+
         var peticion = new HttpRequestMessage(metodo, new Uri(destino.TrimEnd('/') + ruta));
-        peticion.Headers.Authorization = AuthenticationHeaderValue.Parse(bearer);
+        peticion.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return peticion;
     }
 

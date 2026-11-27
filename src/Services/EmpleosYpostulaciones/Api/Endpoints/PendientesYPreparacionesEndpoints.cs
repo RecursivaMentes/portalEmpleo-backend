@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using System.Security.Claims;
 using Application.Postulaciones;
 
@@ -8,13 +9,7 @@ public static class PendientesYPreparacionesEndpoints
     public sealed record AgregarPendienteRequest(Guid EmpleoId);
     public sealed record SolicitarCambiosIARequest(int VersionEdicion, string Instrucciones);
 
-    private static string? Token(HttpRequest solicitud)
-    {
-        var autorizacion = solicitud.Headers.Authorization.ToString();
-        if (!autorizacion.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return null;
-        var token = autorizacion["Bearer ".Length..].Trim();
-        return string.IsNullOrEmpty(token) ? null : token;
-    }
+    private static string? Token(HttpRequest solicitud) { return AuthenticatedToken.Read(solicitud); }
 
     public static void MapPendientesYPreparacionesEndpoints(this WebApplication app)
     {
@@ -58,15 +53,51 @@ public static class PendientesYPreparacionesEndpoints
                 ? Results.NoContent() : Results.NotFound();
         });
 
+        grupo.MapGet("/descartadas/me", async (ClaimsPrincipal usuario,
+            PendientesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            return Results.Ok(await servicio.ListarDescartadasAsync(usuarioId, ct));
+        });
+
+        grupo.MapPut("/descartadas/{empleoId:guid}", async (Guid empleoId, ClaimsPrincipal usuario,
+            PendientesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            await servicio.DescartarOfertaAsync(usuarioId, empleoId, ct);
+            return Results.NoContent();
+        });
+
+        grupo.MapDelete("/descartadas/{empleoId:guid}", async (Guid empleoId, ClaimsPrincipal usuario,
+            PendientesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            await servicio.RestaurarOfertaAsync(usuarioId, empleoId, ct);
+            return Results.NoContent();
+        });
+
         // Una solicitud expresa no cambia el modo: solo Automatica habilita envio directo.
         grupo.MapPost("/preparaciones/solicitar-con-ia", async (
             AgregarPendienteRequest request, ClaimsPrincipal usuario,
             IPreparadorPostulacionesIA preparador, SolicitudUsuarioIAService servicio,
-            CancellationToken ct) =>
+            ILoggerFactory loggerFactory, CancellationToken ct) =>
         {
             if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
                 return Results.Unauthorized();
-            if (!preparador.Disponible) return Results.StatusCode(503);
+            if (!preparador.Disponible)
+            {
+                loggerFactory.CreateLogger("PostulacionesIA").LogWarning(
+                    "Solicitud de preparación rechazada: PostulacionesIA:IntegracionChatbotHabilitada está desactivada.");
+                return Results.Json(new
+                {
+                    mensaje = "La preparación con IA no está habilitada en este momento.",
+                    codigo = 503,
+                    codigoError = "IA_DESHABILITADA"
+                }, statusCode: 503);
+            }
             if (request.EmpleoId == Guid.Empty) return Results.BadRequest();
             var resultado = await servicio.SolicitarAsync(usuarioId, request.EmpleoId, ct);
             return Results.Ok(resultado);
@@ -113,12 +144,21 @@ public static class PendientesYPreparacionesEndpoints
         });
 
         grupo.MapGet("/preparaciones/activa/me", async (
-            ClaimsPrincipal usuario, PreparacionesService servicio, CancellationToken ct) =>
+            ClaimsPrincipal usuario, PreparacionesService servicio,
+            IRegistroProcesamientoAutonomo registro, IConfiguration configuracion, CancellationToken ct) =>
         {
             if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
                 return Results.Unauthorized();
             var (disponible, preparacion) = await servicio.DisponibilidadAsync(usuarioId, ct);
-            return Results.Ok(new { disponible, preparacion });
+            var empleo = preparacion is null ? null : await registro.ObtenerOfertaAsync(preparacion.EmpleoId, ct);
+            return Results.Ok(new
+            {
+                disponible,
+                preparacion,
+                oferta = empleo is null ? null : new { empleo.Id, empleo.Titulo, empleo.EmpresaId },
+                integracionHabilitada = configuracion.GetValue<bool>("PostulacionesIA:IntegracionChatbotHabilitada"),
+                procesamientoHabilitado = configuracion.GetValue<bool>("PostulacionesIA:ProcesamientoHabilitado")
+            });
         });
 
         grupo.MapGet("/preparaciones/{id:guid}", async (

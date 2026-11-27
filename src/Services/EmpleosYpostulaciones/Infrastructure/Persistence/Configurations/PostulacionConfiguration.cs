@@ -13,6 +13,7 @@ public class PostulacionConfiguration : IEntityTypeConfiguration<Postulacion>
 
         builder.Property(x => x.Estado).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.Origen).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.FuenteOferta).HasMaxLength(30);
         builder.Property(x => x.Observaciones).HasMaxLength(2000);
         builder.Property(x => x.TextoPresentacion).HasMaxLength(4000);
         builder.Property(x => x.CvDocumentoEnviado).HasColumnType("bytea");

@@ -15,6 +15,9 @@ public sealed class ProgramadorPostulaciones(
         // La reconciliacion de aprobaciones de CV SIEMPRE funciona. El envio
         // autonomo permanece sujeto a su propia configuracion.
         var minutos = Math.Clamp(configuracion.GetValue<int?>("PostulacionesIA:IntervaloMinutos") ?? 2, 1, 60);
+        logger.LogInformation("Postulaciones IA: integración Chatbot={Integracion}, ciclo autónomo={Procesamiento}, intervalo={Minutos} min.",
+            configuracion.GetValue<bool>("PostulacionesIA:IntegracionChatbotHabilitada"),
+            configuracion.GetValue<bool>("PostulacionesIA:ProcesamientoHabilitado"), minutos);
         using var reloj = new PeriodicTimer(TimeSpan.FromMinutes(minutos));
         do
         {
@@ -39,7 +42,18 @@ public sealed class ProgramadorPostulaciones(
                     }
                 }
                 if (configuracion.GetValue<bool>("PostulacionesIA:ProcesamientoHabilitado"))
-                    await motor.EjecutarCicloAsync(stoppingToken);
+                {
+                    if (!configuracion.GetValue<bool>("PostulacionesIA:IntegracionChatbotHabilitada"))
+                    {
+                        logger.LogWarning("Ciclo autónomo omitido: la integración con Chatbot está deshabilitada.");
+                    }
+                    else
+                    {
+                        logger.LogInformation("Iniciando ciclo de postulaciones autónomas.");
+                        var completadas = await motor.EjecutarCicloAsync(stoppingToken);
+                        logger.LogInformation("Ciclo de postulaciones autónomas finalizado. Preparaciones completadas: {Cantidad}.", completadas);
+                    }
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { logger.LogError(ex, "Error al ejecutar ciclo de postulaciones autonomas."); }

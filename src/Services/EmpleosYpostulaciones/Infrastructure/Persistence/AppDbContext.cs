@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Empleo> Empleos { get; set; }
     public DbSet<Postulacion> Postulaciones { get; set; }
     public DbSet<EmpleoPendiente> EmpleosPendientes { get; set; }
+    public DbSet<OfertaDescartada> OfertasDescartadas { get; set; }
     public DbSet<PreparacionPostulacion> PreparacionesPostulacion { get; set; }
     public DbSet<IntentoPostulacionIA> IntentosPostulacionIA { get; set; }
     public DbSet<ConfiguracionOperativaPostulacion> ConfiguracionesOperativas { get; set; }

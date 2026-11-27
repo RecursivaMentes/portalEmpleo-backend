@@ -192,5 +192,12 @@ public class ConfiguracionPostulacionesTests
             Actualizaciones++;
             return Task.CompletedTask;
         }
+
+        public Task ActualizarPreferenciasLaboralesAsync(Guid usuarioId, string preferenciasJson,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<bool> UpdatePasswordIfUnchangedAsync(Guid userId, string currentPasswordHash,
+            string newPasswordHash, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 }

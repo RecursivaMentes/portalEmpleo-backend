@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using Recomendaciones.Application.DTOs;
 using Recomendaciones.Application.Services;
 using Recomendaciones.Infrastructure.Services;
@@ -51,11 +52,9 @@ public static class RecomendacionesEndpoints
                 if (usuarioAutenticado != usuarioId)
                     return Results.Forbid();
 
-                var autorizacion = solicitud.Headers.Authorization.ToString();
-                if (!autorizacion.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                if (!TryObtenerAccessToken(solicitud, out var accessToken))
                     return Results.Unauthorized();
 
-                var accessToken = autorizacion["Bearer ".Length..].Trim();
                 var resultados = await service.AnalizarAsync(
                     usuarioId, accessToken, cancellationToken);
 
@@ -87,11 +86,9 @@ public static class RecomendacionesEndpoints
                 if (usuarioAutenticado != usuarioId)
                     return Results.Forbid();
 
-                var autorizacion = solicitud.Headers.Authorization.ToString();
-                if (!autorizacion.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                if (!TryObtenerAccessToken(solicitud, out var accessToken))
                     return Results.Unauthorized();
 
-                var accessToken = autorizacion["Bearer ".Length..].Trim();
                 var recomendaciones = await service.ObtenerRecomendacionesAsync(
                     usuarioId, accessToken, cancellationToken);
 
@@ -141,5 +138,16 @@ public static class RecomendacionesEndpoints
                     _ => Results.Problem("No se pudo obtener la compatibilidad de la oferta.")
                 };
             }).RequireAuthorization();
+    }
+    private static bool TryObtenerAccessToken(HttpRequest solicitud, out string accessToken)
+    {
+        var token = AuthenticatedToken.Read(solicitud); if (!string.IsNullOrWhiteSpace(token))
+        {
+            accessToken = token;
+            return true;
+        }
+
+        accessToken = string.Empty;
+        return false;
     }
 }

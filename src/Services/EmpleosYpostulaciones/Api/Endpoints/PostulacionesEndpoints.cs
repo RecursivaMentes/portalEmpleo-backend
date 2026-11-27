@@ -1,3 +1,4 @@
+using PortalEmpleo.Shared.Authentication;
 using System.Security.Claims;
 using Application.Postulaciones;
 using Domain.Enums;
@@ -30,12 +31,8 @@ public static class PostulacionesEndpoints
                 return Results.Forbid();
             }
 
-            // Se reutiliza el JWT validado por el middleware para consultar Usuarios.
-            var authorization = httpContext.Request.Headers.Authorization.ToString();
-            if (!authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                return Results.Unauthorized();
-            var token = authorization.Substring("Bearer ".Length).Trim();
-            if (string.IsNullOrWhiteSpace(token))
+            // Se reutiliza el JWT de la cookie validado por el middleware para consultar Usuarios.
+            var token = AuthenticatedToken.Read(httpContext.Request); if (string.IsNullOrWhiteSpace(token))
                 return Results.Unauthorized();
 
             var postulacion = await servicio.CrearAsync(

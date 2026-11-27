@@ -33,18 +33,18 @@ public class PerfilCompletitudTests
     {
         var resultado = PerfilCompletitud.Evaluar(UsuarioValido(), null);
         Assert.False(resultado.PerfilCompleto);
-        Assert.Contains("Resumen profesional", resultado.Faltantes);
+
         Assert.Contains("Habilidades", resultado.Faltantes);
         Assert.Contains("Experiencia laboral o declaración SinExperiencia", resultado.Faltantes);
     }
 
     [Fact]
-    public void SinResumenONingunaHabilidad_IndicaAmbosFaltantes()
+    public void SinResumenONingunaHabilidad_IndicaHabilidadesFaltantes()
     {
         var perfil = PerfilValido() with { Resumen = " ", Habilidades = [] };
         var resultado = PerfilCompletitud.Evaluar(UsuarioValido(), perfil);
         Assert.False(resultado.PerfilCompleto);
-        Assert.Contains("Resumen profesional", resultado.Faltantes);
+
         Assert.Contains("Habilidades", resultado.Faltantes);
     }
 

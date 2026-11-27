@@ -16,6 +16,7 @@ public sealed class PreparacionPostulacionConfiguration : IEntityTypeConfigurati
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Estado).HasConversion<string>().HasMaxLength(40).IsRequired();
         builder.Property(x => x.Origen).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(x => x.FuenteOferta).HasMaxLength(30);
         builder.Property(x => x.TextoPresentacion).HasMaxLength(4000);
         builder.Property(x => x.ModoEjecucion).HasMaxLength(25);
         builder.Property(x => x.UltimoError).HasMaxLength(500);

@@ -67,13 +67,21 @@ public sealed class ConsultasAutonomasHttpClient(IHttpClientFactory fabrica, ICo
         return respuesta.StatusCode == HttpStatusCode.NoContent;
     }
 
-    public async Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId,
-        CancellationToken ct = default)
+    public Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId,
+        CancellationToken ct = default) => ObtenerInternoAsync(usuarioId, null, ct);
+
+    public Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId, int compatibilidadMinima,
+        CancellationToken ct = default) => ObtenerInternoAsync(usuarioId, (int?)compatibilidadMinima, ct);
+
+    private async Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId, int? compatibilidadMinima,
+        CancellationToken ct)
     {
         var configuracion = await ConfiguracionAsync(usuarioId, ct)
             ?? throw new InvalidOperationException("Cuenta no disponible para ordenamiento interno.");
-        using var respuesta = await ConsultarAsync("RecomendacionesOrdenPendientes",
-            $"/internal/recomendaciones/usuarios/{usuarioId}/analizar", ct);
+        var ruta = $"/internal/recomendaciones/usuarios/{usuarioId}/analizar";
+        if (compatibilidadMinima.HasValue)
+            ruta += $"?compatibilidadMinima={compatibilidadMinima.Value}";
+        using var respuesta = await ConsultarAsync("RecomendacionesOrdenPendientes", ruta, ct);
         List<CompatibilidadInterna> resultados = [];
         if (respuesta.StatusCode != HttpStatusCode.NotFound)
         {

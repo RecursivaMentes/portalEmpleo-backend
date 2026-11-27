@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,4 +21,9 @@
 	<ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <Compile Include="../../../Shared/Authentication/AuthenticatedToken.cs" Link="Shared/AuthenticatedToken.cs" />
+    <Compile Include="../../../Shared/Authentication/CookieCsrfProtection.cs" Link="Shared/CookieCsrfProtection.cs" />
+  </ItemGroup>
 </Project>
