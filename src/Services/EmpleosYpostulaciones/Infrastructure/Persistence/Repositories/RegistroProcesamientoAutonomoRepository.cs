@@ -18,6 +18,16 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db,
     public Task<List<Guid>> UsuariosConPendientesAsync(CancellationToken ct = default) =>
         db.EmpleosPendientes.AsNoTracking().Select(x => x.UsuarioId).Distinct().ToListAsync(ct);
 
+    public Task<List<Guid>> UsuariosHabilitadosAsync(CancellationToken ct = default) =>
+        db.ConfiguracionesOperativas.AsNoTracking()
+            .Where(x => x.Modo == "Automatica" || x.Modo == "Asistida")
+            .Select(x => x.UsuarioId)
+            // Conserva la inicialización gradual de configuraciones anteriores.
+            .Union(db.EmpleosPendientes.AsNoTracking()
+                .Where(p => !db.ConfiguracionesOperativas.Any(c => c.UsuarioId == p.UsuarioId))
+                .Select(p => p.UsuarioId))
+            .OrderBy(x => x).ToListAsync(ct);
+
     public Task<int> CupoConsumidoAsync(Guid usuarioId, DateTime inicioUtc, DateTime finUtc,
         CancellationToken ct = default) =>
         db.PreparacionesPostulacion.AsNoTracking().CountAsync(x =>

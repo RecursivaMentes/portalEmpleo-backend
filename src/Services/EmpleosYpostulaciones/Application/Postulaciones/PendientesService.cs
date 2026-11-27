@@ -33,6 +33,24 @@ public sealed class PendientesService(
         return pendiente;
     }
 
+    public Task<List<Guid>> ListarDescartadasAsync(Guid usuarioId, CancellationToken ct = default)
+    {
+        if (usuarioId == Guid.Empty) throw PostulacionException.DatosInvalidos();
+        return repository.ListarDescartadasAsync(usuarioId, ct);
+    }
+
+    public Task DescartarOfertaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default)
+    {
+        if (usuarioId == Guid.Empty || empleoId == Guid.Empty) throw PostulacionException.DatosInvalidos();
+        return repository.DescartarOfertaAsync(usuarioId, empleoId, ct);
+    }
+
+    public Task RestaurarOfertaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default)
+    {
+        if (usuarioId == Guid.Empty || empleoId == Guid.Empty) throw PostulacionException.DatosInvalidos();
+        return repository.RestaurarOfertaAsync(usuarioId, empleoId, ct);
+    }
+
     public Task<List<EmpleoPendiente>> ListarAsync(Guid usuarioId, CancellationToken ct = default) =>
         repository.ListarPendientesAsync(usuarioId, ct);
 

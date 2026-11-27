@@ -53,6 +53,32 @@ public static class PendientesYPreparacionesEndpoints
                 ? Results.NoContent() : Results.NotFound();
         });
 
+        grupo.MapGet("/descartadas/me", async (ClaimsPrincipal usuario,
+            PendientesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            return Results.Ok(await servicio.ListarDescartadasAsync(usuarioId, ct));
+        });
+
+        grupo.MapPut("/descartadas/{empleoId:guid}", async (Guid empleoId, ClaimsPrincipal usuario,
+            PendientesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            await servicio.DescartarOfertaAsync(usuarioId, empleoId, ct);
+            return Results.NoContent();
+        });
+
+        grupo.MapDelete("/descartadas/{empleoId:guid}", async (Guid empleoId, ClaimsPrincipal usuario,
+            PendientesService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            await servicio.RestaurarOfertaAsync(usuarioId, empleoId, ct);
+            return Results.NoContent();
+        });
+
         // Una solicitud expresa no cambia el modo: solo Automatica habilita envio directo.
         grupo.MapPost("/preparaciones/solicitar-con-ia", async (
             AgregarPendienteRequest request, ClaimsPrincipal usuario,

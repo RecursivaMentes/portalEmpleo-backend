@@ -152,6 +152,92 @@ public sealed class PendientesYPreparacionesTests
         Assert.Equal("PREPARACION_NO_CANCELABLE", ex.CodigoError);
     }
 
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    public async Task AgenteAsistidoSinPendientesRespetaCupo(int consumido, bool debePreparar)
+    {
+        var datos = new DatosFalsos();
+        var oferta = OfertaValida();
+        var orden = new OrdenamientoFalso(oferta.Id);
+        var registro = new RegistroFalso(_usuario, oferta, datos, consumido);
+        var post = new PostulacionesFalsas { Oferta = oferta };
+        var motor = new ProcesamientoAutonomoService(registro, new ConsultasFalsas(),
+            new OrdenamientoPendientesService(orden, orden, orden, datos),
+            new PreparacionesService(datos, post), new PreparadorFalso(), null!, null!);
+        var cantidad = await motor.EjecutarCicloAsync();
+        Assert.Empty(datos.Pendientes);
+        Assert.Empty(post.Registradas);
+        Assert.Equal(debePreparar ? 1 : 0, cantidad);
+        if (!debePreparar)
+        {
+            Assert.Empty(datos.Preparaciones);
+            return;
+        }
+        var preparacion = Assert.Single(datos.Preparaciones);
+        Assert.Equal(oferta.Id, preparacion.EmpleoId);
+        Assert.Equal(PreparacionPostulacion.FuenteRecomendaciones, preparacion.FuenteOferta);
+        Assert.Equal(OrigenPreparacionPostulacion.IniciativaIA, preparacion.Origen);
+        Assert.Equal(EstadoPreparacionPostulacion.PendienteAprobacion, preparacion.Estado);
+        Assert.True(preparacion.ContabilizadaEnCupo);
+        Assert.Equal(0, await motor.EjecutarCicloAsync());
+        Assert.Single(datos.Preparaciones);
+    }
+
+    private sealed class OrdenamientoFalso(Guid empleoId) : IOrdenamientoPendientesRepository,
+        IDatosExternosOrdenamiento, IDatosExternosOrdenamientoInterno
+    {
+        public Task<List<OfertaPendienteDatos>> ObtenerPendientesAsync(Guid usuarioId, CancellationToken ct = default) =>
+            Task.FromResult(new List<OfertaPendienteDatos>());
+        public Task<DatosExternosOrdenamiento> ObtenerAsync(Guid usuarioId, string accessToken, CancellationToken ct = default) =>
+            ObtenerInternoAsync(usuarioId, ct);
+        public Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId, CancellationToken ct = default) =>
+            Task.FromResult(new DatosExternosOrdenamiento("Prioridad", null,
+                new Dictionary<Guid, decimal> { [empleoId] = 95 }));
+    }
+
+    private sealed class ConsultasFalsas : IConsultasProcesamientoInterno
+    {
+        public Task<ConfiguracionProcesamiento?> ConfiguracionAsync(Guid usuarioId, CancellationToken ct = default) =>
+            Task.FromResult<ConfiguracionProcesamiento?>(new("Asistida", 60, 1, null, "Prioridad"));
+        public Task<ValidacionPerfilLaboralResultado?> ValidarPerfilAsync(Guid usuarioId, CancellationToken ct = default) =>
+            Task.FromResult<ValidacionPerfilLaboralResultado?>(new(true, []));
+        public Task<bool> ValidarCvAsync(Guid usuarioId, Guid cvId, CancellationToken ct = default) => Task.FromResult(true);
+    }
+
+    private sealed class PreparadorFalso : IPreparadorPostulacionesIA
+    {
+        public bool Disponible => true;
+        public Task<ResultadoPreparacionIA> PrepararAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
+            Task.FromResult(new ResultadoPreparacionIA(Guid.NewGuid(), "Presentación", false));
+    }
+
+    private sealed class RegistroFalso(Guid usuarioId, Empleo oferta, DatosFalsos datos, int consumido) : IRegistroProcesamientoAutonomo
+    {
+        private int cupo = consumido;
+        public Task<List<Guid>> UsuariosConPendientesAsync(CancellationToken ct = default) => Task.FromResult(new List<Guid>());
+        public Task<List<Guid>> UsuariosHabilitadosAsync(CancellationToken ct = default) => Task.FromResult(new List<Guid> { usuarioId });
+        public Task<int> CupoConsumidoAsync(Guid u, DateTime inicioUtc, DateTime finUtc, CancellationToken ct = default) => Task.FromResult(cupo);
+        public Task<int> IntentosEnPeriodoAsync(Guid u, Guid empleoId, DateTime desdeUtc, CancellationToken ct = default) => Task.FromResult(0);
+        public Task<Empleo?> ObtenerOfertaAsync(Guid empleoId, CancellationToken ct = default) => Task.FromResult<Empleo?>(oferta);
+        public Task<PreparacionPostulacion?> EstadoActualAsync(Guid id, Guid u, CancellationToken ct = default) => datos.ObtenerPreparacionAsync(id, u, ct);
+        public Task GuardarPreparacionAsync(PreparacionPostulacion p, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RegistrarIntentoAsync(IntentoProcesamientoAutonomo intento, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<int> RecuperarInterrumpidasAsync(DateTime limiteUtc, CancellationToken ct = default) => Task.FromResult(0);
+        public Task<List<PreparacionPostulacion>> ObtenerCvEnAplicacionAsync(DateTime limiteUtc, CancellationToken ct = default) =>
+            Task.FromResult(new List<PreparacionPostulacion>());
+        public async Task<bool> ReservarCupoPropuestaAsync(Guid id, Guid u, int limite, DateTime inicioUtc,
+            DateTime finUtc, CancellationToken ct = default)
+        {
+            if (cupo >= limite) return false;
+            var prep = await datos.ObtenerPreparacionAsync(id, u, ct);
+            if (prep is null) return false;
+            prep.ContabilizadaEnCupo = true;
+            cupo++;
+            return true;
+        }
+    }
+
     private static Empleo OfertaValida() => new()
     {
         Id = Guid.NewGuid(), Estado = EstadoEmpleo.Publicado,

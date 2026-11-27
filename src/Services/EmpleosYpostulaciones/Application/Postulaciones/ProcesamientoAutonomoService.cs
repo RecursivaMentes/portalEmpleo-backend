@@ -40,13 +40,32 @@ public sealed class ProcesamientoAutonomoService(
             texto.Contains(x.Trim(), StringComparison.OrdinalIgnoreCase)) == true;
     }
 
+    // Las ofertas guardadas conservan el orden de preferencias existente.
+    // Las nuevas recomendaciones deben además ajustarse a todas las preferencias configuradas.
+    public static bool Elegible(Empleo oferta, PreferenciasProcesamiento? preferencias, string? fuente,
+        DateTime ahoraUtc)
+    {
+        if (oferta.Estado != EstadoEmpleo.Publicado ||
+            (oferta.FechaCierre is { } cierre && cierre <= ahoraUtc) || Excluida(oferta, preferencias?.Exclusiones))
+            return false;
+        if (fuente != PreparacionPostulacion.FuenteRecomendaciones || preferencias is null) return true;
+        static bool Coincide(List<string>? valores, Func<string, bool> coincide) =>
+            valores is not { Count: > 0 } || valores.Any(x => !string.IsNullOrWhiteSpace(x) && coincide(x.Trim()));
+        return Coincide(preferencias.PuestosInteres, x => oferta.Titulo.Contains(x, StringComparison.OrdinalIgnoreCase)) &&
+            Coincide(preferencias.UbicacionesLaborales, x => oferta.Ubicacion?.Contains(x, StringComparison.OrdinalIgnoreCase) == true) &&
+            Coincide(preferencias.ModalidadesTrabajo, x => string.Equals(x, oferta.Modalidad.ToString(), StringComparison.OrdinalIgnoreCase)) &&
+            Coincide(preferencias.TiposContrato, x => string.Equals(x, oferta.TipoContrato.ToString(), StringComparison.OrdinalIgnoreCase)) &&
+            (!preferencias.ExpectativaSalarial.HasValue ||
+                (oferta.SalarioMin.HasValue && oferta.SalarioMin.Value >= preferencias.ExpectativaSalarial.Value));
+    }
+
     public async Task<int> EjecutarCicloAsync(CancellationToken ct = default)
     {
         // Nunca reservar trabajo si no existe el adaptador real del agente.
         if (!preparador.Disponible) return 0;
         var ahora = DateTime.UtcNow;
         var completadas = 0;
-        foreach (var usuarioId in await registro.UsuariosConPendientesAsync(ct))
+        foreach (var usuarioId in await registro.UsuariosHabilitadosAsync(ct))
         {
             ct.ThrowIfCancellationRequested();
             try
@@ -60,16 +79,13 @@ public sealed class ProcesamientoAutonomoService(
                 continue;
             var perfil = await consultas.ValidarPerfilAsync(usuarioId, ct);
             if (perfil?.PerfilCompleto != true) continue;
-            var pendientes = await ordenamiento.ListarInternoAsync(usuarioId, ct);
-            foreach (var pendiente in pendientes)
+            var candidatos = await ordenamiento.ListarCandidatosInternosAsync(usuarioId, config.CompatibilidadMinima, ct);
+            foreach (var candidato in candidatos)
             {
                 ct.ThrowIfCancellationRequested();
-                if (pendiente.Compatibilidad is null ||
-                    pendiente.Compatibilidad.Value < config.CompatibilidadMinima) continue;
-                var oferta = await registro.ObtenerOfertaAsync(pendiente.EmpleoId, ct);
-                if (oferta is null || oferta.Estado != EstadoEmpleo.Publicado ||
-                    (oferta.FechaCierre.HasValue && oferta.FechaCierre <= DateTime.UtcNow) ||
-                    Excluida(oferta, config.Preferencias?.Exclusiones)) continue;
+                var oferta = await registro.ObtenerOfertaAsync(candidato.EmpleoId, ct);
+                if (oferta is null || !Elegible(oferta, config.Preferencias, candidato.FuenteOferta, DateTime.UtcNow))
+                    continue;
                 if (await registro.IntentosEnPeriodoAsync(usuarioId, oferta.Id, ahora.AddHours(-24), ct) >= 3)
                     continue;
                 PreparacionPostulacion preparacion;
@@ -77,12 +93,13 @@ public sealed class ProcesamientoAutonomoService(
                 {
                     // Chequeo previo y restriccion unica de PostgreSQL ante carreras.
                     preparacion = await preparaciones.RegistrarInicioAsync(
-                        usuarioId, oferta.Id, OrigenPreparacionPostulacion.IniciativaIA, ct);
+                        usuarioId, oferta.Id, OrigenPreparacionPostulacion.IniciativaIA, ct,
+                        candidato.FuenteOferta, config.Modo);
                 }
                 catch (PostulacionException ex) when (ex.CodigoError is
                     "POSTULACION_DUPLICADA" or "IA_OCUPADA" or "PREPARACION_DUPLICADA" or
                     "OFERTA_NO_DISPONIBLE" or "OFERTA_FINALIZADA" or "OFERTA_NO_ENCONTRADA" or
-                    "PENDIENTE_RETIRADO")
+                    "PENDIENTE_RETIRADO" or "OFERTA_DESCARTADA")
                 {
                     continue;
                 }
@@ -146,6 +163,8 @@ public sealed class ProcesamientoAutonomoService(
                     await registro.GuardarPreparacionAsync(actual, ct);
                     // Revalidar configuracion y cupo ANTES del envio automatico.
                     var vigente = await consultas.ConfiguracionAsync(usuarioId, ct);
+                    if (vigente is not null)
+                        (inicio, fin) = DiaLocalUtc(DateTime.UtcNow, vigente.ZonaHoraria);
                     if (vigente is null || vigente.Modo != "Automatica" ||
                         vigente.LimiteDiario is < 1 or > 10 ||
                         vigente.CompatibilidadMinima is < 1 or > 100 ||
@@ -160,14 +179,14 @@ public sealed class ProcesamientoAutonomoService(
                     // Una preferencia, exclusion o puntuacion puede cambiar mientras la IA prepara.
                     // En tal caso, se conserva el borrador y NO se envia automaticamente.
                     var ofertaVigente = await registro.ObtenerOfertaAsync(oferta.Id, ct);
-                    var rankingVigente = await ordenamiento.ListarInternoAsync(usuarioId, ct);
+                    var rankingVigente = await ordenamiento.ListarCandidatosInternosAsync(usuarioId,
+                        vigente.CompatibilidadMinima, ct);
                     var candidatoVigente = rankingVigente.FirstOrDefault(x => x.EmpleoId == oferta.Id);
                     if (ofertaVigente is null ||
-                        ofertaVigente.Estado != EstadoEmpleo.Publicado ||
-                        ofertaVigente.FechaCierre is { } cierre && cierre <= DateTime.UtcNow ||
-                        ProcesamientoAutonomoService.Excluida(ofertaVigente, vigente.Preferencias?.Exclusiones) ||
-                        candidatoVigente?.Compatibilidad is not { } scoreVigente ||
-                        scoreVigente < vigente.CompatibilidadMinima)
+                        !Elegible(ofertaVigente, vigente.Preferencias, actual.FuenteOferta, DateTime.UtcNow) ||
+                        candidatoVigente is null ||
+                        (actual.FuenteOferta != PreparacionPostulacion.FuenteRecomendaciones &&
+                         candidatoVigente.FuenteOferta != PreparacionPostulacion.FuentePendientes))
                     {
                         actual.UltimoError = "La oferta, compatibilidad o preferencias ya no cumplen los criterios del usuario.";
                         await registro.GuardarPreparacionAsync(actual, ct);

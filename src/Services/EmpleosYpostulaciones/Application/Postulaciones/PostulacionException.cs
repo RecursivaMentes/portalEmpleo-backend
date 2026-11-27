@@ -43,6 +43,9 @@ public sealed class PostulacionException : Exception
     public static PostulacionException TrabajoIaActivo() =>
         new("TRABAJO_IA_ACTIVO", "Hay una preparación de IA en curso o pendiente de revisión para esta oferta. Detenela o cancelala antes de quitar la oferta.");
 
+    public static PostulacionException OfertaDescartada() =>
+        new("OFERTA_DESCARTADA", "Marcaste esta oferta como no interesante para el agente. No se enviará automáticamente.");
+
     public static PostulacionException PendienteRetirado() =>
         new("PENDIENTE_RETIRADO", "Esta oferta ya no está en tus pendientes. No se enviará automáticamente.");
 

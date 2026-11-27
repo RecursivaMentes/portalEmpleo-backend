@@ -38,10 +38,16 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
                 throw PostulacionException.CambioUsuarioEnCurso();
             if (automatico)
             {
-                var modoVigente = await db.ConfiguracionesOperativas.AsNoTracking()
-                    .Where(x => x.UsuarioId == usuarioId).Select(x => x.Modo).FirstOrDefaultAsync(ct);
-                if (modoVigente != "Automatica")
+                var configVigente = await db.ConfiguracionesOperativas.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.UsuarioId == usuarioId, ct);
+                if (configVigente?.Modo != "Automatica")
                     throw PostulacionException.PreparacionDesactualizada();
+                if (cupo is not null)
+                {
+                    var (inicio, fin) = ProcesamientoAutonomoService.DiaLocalUtc(DateTime.UtcNow, configVigente.ZonaHoraria);
+                    if (cupo.Limite != configVigente.LimiteDiario || cupo.InicioUtc != inicio || cupo.FinUtc != fin)
+                        throw PostulacionException.PreparacionDesactualizada();
+                }
             }
             await BloqueoOfertaUsuario.TomarAsync(db, usuarioId, postulacion.EmpleoId, ct);
             // El servicio ya pudo consultar la entidad con seguimiento; evitamos usar su
@@ -59,12 +65,17 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
                 prep.EmpleoId != postulacion.EmpleoId || postulacion.UsuarioId != usuarioId)
                 throw PostulacionException.PreparacionDesactualizada();
 
-            // Protección adicional por si el pendiente fue retirado antes del envío:
-            // solo la iniciativa IA autónoma depende de esta cola.
-            if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
-                !await db.EmpleosPendientes.AsNoTracking().AnyAsync(p =>
-                    p.UsuarioId == usuarioId && p.EmpleoId == prep.EmpleoId, ct))
-                throw PostulacionException.PendienteRetirado();
+            // La fuente de la preparación determina si se requiere un pendiente vigente.
+            if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA)
+            {
+                if (await db.OfertasDescartadas.AsNoTracking().AnyAsync(x =>
+                    x.UsuarioId == usuarioId && x.EmpleoId == prep.EmpleoId, ct))
+                    throw PostulacionException.OfertaDescartada();
+                if (prep.FuenteOferta != PreparacionPostulacion.FuenteRecomendaciones &&
+                    !await db.EmpleosPendientes.AsNoTracking().AnyAsync(p =>
+                        p.UsuarioId == usuarioId && p.EmpleoId == prep.EmpleoId, ct))
+                    throw PostulacionException.PendienteRetirado();
+            }
 
             // Revalidacion LOCAL dentro de la transaccion; todas las validaciones remotas
             // de perfil y CV se completaron antes de abrirla.
@@ -88,6 +99,7 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
                     throw PostulacionException.LimiteDiarioAlcanzado();
             }
             // Una transaccion: enviar, cerrar preparacion y quitar de pendientes.
+            postulacion.FuenteOferta = prep.FuenteOferta;
             db.Postulaciones.Add(postulacion);
             prep.PostulacionId = postulacion.Id;
             prep.Estado = EstadoPreparacionPostulacion.Enviada;

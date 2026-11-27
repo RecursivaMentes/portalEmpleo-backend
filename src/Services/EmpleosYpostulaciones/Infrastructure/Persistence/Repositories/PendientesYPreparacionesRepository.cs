@@ -44,6 +44,9 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             if (await db.Postulaciones.AnyAsync(x =>
                 x.UsuarioId == pendiente.UsuarioId && x.EmpleoId == pendiente.EmpleoId && x.Estado != EstadoPostulacion.Retirada, ct))
                 throw PostulacionException.Duplicada();
+            // Guardar expresamente una oferta vuelve a habilitarla para la IA.
+            await db.OfertasDescartadas.Where(x => x.UsuarioId == pendiente.UsuarioId &&
+                x.EmpleoId == pendiente.EmpleoId).ExecuteDeleteAsync(ct);
             db.EmpleosPendientes.Add(pendiente);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
@@ -80,6 +83,37 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             db.EmpleosPendientes.Remove(vigente);
             await db.SaveChangesAsync(ct);
         }
+        await tx.CommitAsync(ct);
+    }
+
+    public Task<List<Guid>> ListarDescartadasAsync(Guid usuarioId, CancellationToken ct = default) =>
+        db.OfertasDescartadas.AsNoTracking().Where(x => x.UsuarioId == usuarioId)
+            .Select(x => x.EmpleoId).ToListAsync(ct);
+
+    public async Task DescartarOfertaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
+        await BloqueoOfertaUsuario.TomarAsync(db, usuarioId, empleoId, ct);
+        if (!await db.Empleos.AsNoTracking().AnyAsync(x => x.Id == empleoId, ct))
+            throw PostulacionException.OfertaNoEncontrada();
+        if (await ExistePreparacionNoFinalizadaAsync(usuarioId, empleoId, ct))
+            throw PostulacionException.TrabajoIaActivo();
+        if (!await db.OfertasDescartadas.AnyAsync(x => x.UsuarioId == usuarioId && x.EmpleoId == empleoId, ct))
+            db.OfertasDescartadas.Add(new OfertaDescartada { UsuarioId = usuarioId, EmpleoId = empleoId });
+        await db.EmpleosPendientes.Where(x => x.UsuarioId == usuarioId && x.EmpleoId == empleoId)
+            .ExecuteDeleteAsync(ct);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task RestaurarOfertaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
+        await BloqueoOfertaUsuario.TomarAsync(db, usuarioId, empleoId, ct);
+        await db.OfertasDescartadas.Where(x => x.UsuarioId == usuarioId && x.EmpleoId == empleoId)
+            .ExecuteDeleteAsync(ct);
         await tx.CommitAsync(ct);
     }
 
@@ -144,12 +178,21 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
             if (await db.Postulaciones.AsNoTracking().AnyAsync(p =>
                 p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId && p.Estado != EstadoPostulacion.Retirada, ct))
                 throw PostulacionException.Duplicada();
-            // Solo la iniciativa IA autónoma requiere una oferta en la cola.
-            // Una solicitud expresa del usuario no cambia su comportamiento.
-            if (preparacion.Origen == OrigenPreparacionPostulacion.IniciativaIA &&
-                !await db.EmpleosPendientes.AsNoTracking().AnyAsync(p =>
-                    p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId, ct))
-                throw PostulacionException.PendienteRetirado();
+            if (preparacion.Origen == OrigenPreparacionPostulacion.IniciativaIA)
+            {
+                var modoVigente = await db.ConfiguracionesOperativas.AsNoTracking()
+                    .Where(x => x.UsuarioId == preparacion.UsuarioId).Select(x => x.Modo).FirstOrDefaultAsync(ct);
+                if (!ProcesamientoAutonomoService.Permitido(modoVigente) ||
+                    (preparacion.ModoEjecucion is not null && preparacion.ModoEjecucion != modoVigente))
+                    throw PostulacionException.PreparacionDesactualizada();
+                if (await db.OfertasDescartadas.AsNoTracking().AnyAsync(x =>
+                    x.UsuarioId == preparacion.UsuarioId && x.EmpleoId == preparacion.EmpleoId, ct))
+                    throw PostulacionException.OfertaDescartada();
+                if (preparacion.FuenteOferta != PreparacionPostulacion.FuenteRecomendaciones &&
+                    !await db.EmpleosPendientes.AsNoTracking().AnyAsync(p =>
+                        p.UsuarioId == preparacion.UsuarioId && p.EmpleoId == preparacion.EmpleoId, ct))
+                    throw PostulacionException.PendienteRetirado();
+            }
             db.PreparacionesPostulacion.Add(preparacion);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);

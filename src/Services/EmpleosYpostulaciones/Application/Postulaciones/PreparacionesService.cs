@@ -11,9 +11,18 @@ public sealed class PreparacionesService(
     // un procesador que pueda completar o liberar la ejecucion reservada.
     public async Task<PreparacionPostulacion> RegistrarInicioAsync(
         Guid usuarioId, Guid empleoId, OrigenPreparacionPostulacion origen,
-        CancellationToken ct = default)
+        CancellationToken ct = default, string? fuenteOferta = null, string? modoEjecucion = null)
     {
         if (usuarioId == Guid.Empty || empleoId == Guid.Empty || !Enum.IsDefined(origen))
+            throw PostulacionException.DatosInvalidos();
+        if (origen == OrigenPreparacionPostulacion.IniciativaIA)
+        {
+            fuenteOferta ??= PreparacionPostulacion.FuentePendientes;
+            if (fuenteOferta is not (PreparacionPostulacion.FuentePendientes or PreparacionPostulacion.FuenteRecomendaciones) ||
+                (modoEjecucion is not null && !ProcesamientoAutonomoService.Permitido(modoEjecucion)))
+                throw PostulacionException.DatosInvalidos();
+        }
+        else if (fuenteOferta is not null || modoEjecucion is not null)
             throw PostulacionException.DatosInvalidos();
         var oferta = await postulaciones.ObtenerEmpleoAsync(empleoId, ct);
         if (oferta is null) throw PostulacionException.OfertaNoEncontrada();
@@ -34,6 +43,8 @@ public sealed class PreparacionesService(
             UsuarioId = usuarioId,
             EmpleoId = empleoId,
             Origen = origen,
+            FuenteOferta = fuenteOferta,
+            ModoEjecucion = modoEjecucion,
             Estado = EstadoPreparacionPostulacion.Preparando,
             FechaCreacion = ahora,
             FechaActualizacion = ahora

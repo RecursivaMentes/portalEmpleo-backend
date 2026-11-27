@@ -78,14 +78,13 @@ public sealed class AprobacionCvIAService(
                 var (inicio, fin) = ProcesamientoAutonomoService.DiaLocalUtc(DateTime.UtcNow, config.ZonaHoraria);
                 if (await registro.CupoConsumidoAsync(usuarioId, inicio, fin, ct)
                     >= config.LimiteDiario) return prep;
-                var pendientes = await ordenamiento.ListarInternoAsync(usuarioId, ct);
-                var ofertaPendiente = pendientes.FirstOrDefault(x => x.EmpleoId == prep.EmpleoId);
-                if (ofertaPendiente?.Compatibilidad is not { } score ||
-                    score < config.CompatibilidadMinima) return prep;
+                var candidatos = await ordenamiento.ListarCandidatosInternosAsync(usuarioId, config.CompatibilidadMinima, ct);
+                var candidato = candidatos.FirstOrDefault(x => x.EmpleoId == prep.EmpleoId);
+                if (candidato is null || (prep.FuenteOferta != PreparacionPostulacion.FuenteRecomendaciones &&
+                    candidato.FuenteOferta != PreparacionPostulacion.FuentePendientes)) return prep;
                 var oferta = await registro.ObtenerOfertaAsync(prep.EmpleoId, ct);
-                if (oferta is null ||
-                    ProcesamientoAutonomoService.Excluida(oferta, config.Preferencias?.Exclusiones))
-                    return prep;
+                if (oferta is null || !ProcesamientoAutonomoService.Elegible(oferta, config.Preferencias,
+                    prep.FuenteOferta, DateTime.UtcNow)) return prep;
             }
             var postulacion = await postulaciones.ValidarYConstruirInternoAsync(
                 new CrearPostulacionRequest(usuarioId, prep.EmpleoId,

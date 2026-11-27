@@ -12,6 +12,9 @@ public class PreparacionPostulacion
     public Guid? CvId { get; set; }
     public string? TextoPresentacion { get; set; }
     public OrigenPreparacionPostulacion Origen { get; set; }
+    public const string FuentePendientes = "Pendientes";
+    public const string FuenteRecomendaciones = "Recomendaciones";
+    public string? FuenteOferta { get; set; }
     public EstadoPreparacionPostulacion Estado { get; set; } = EstadoPreparacionPostulacion.Preparando;
     public Guid? PostulacionId { get; set; }
     public string? ModoEjecucion { get; set; }

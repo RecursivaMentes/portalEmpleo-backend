@@ -144,6 +144,24 @@ namespace Infrastructure.Migrations
                     b.ToTable("empleos_pendientes", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.OfertaDescartada", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EmpleoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UsuarioId", "EmpleoId");
+
+                    b.HasIndex("EmpleoId");
+
+                    b.ToTable("ofertas_descartadas", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.IntentoPostulacionIA", b =>
                 {
                     b.Property<Guid>("Id")
@@ -227,6 +245,10 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("FuenteOferta")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<bool>("RequiereAprobacion")
                         .HasColumnType("boolean");
 
@@ -307,6 +329,10 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("FuenteOferta")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<Guid?>("PostulacionId")
                         .HasColumnType("uuid");
 
@@ -368,6 +394,15 @@ namespace Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Domain.Entities.EmpleoPendiente", b =>
+                {
+                    b.HasOne("Domain.Entities.Empleo", null)
+                        .WithMany()
+                        .HasForeignKey("EmpleoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Entities.OfertaDescartada", b =>
                 {
                     b.HasOne("Domain.Entities.Empleo", null)
                         .WithMany()

@@ -34,6 +34,14 @@ public interface IConsultasProcesamientoInterno
 public interface IDatosExternosOrdenamientoInterno
 {
     Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId, CancellationToken ct = default);
+    async Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId, int compatibilidadMinima,
+        CancellationToken ct = default)
+    {
+        var datos = await ObtenerInternoAsync(usuarioId, ct);
+        return datos with { Compatibilidades = datos.Compatibilidades
+            .Where(x => x.Value >= compatibilidadMinima && x.Value <= 100m)
+            .ToDictionary(x => x.Key, x => x.Value) };
+    }
 }
 
 // El Commit 9 conectara Chatbot a este contrato. Una implementacion no configurada
@@ -57,6 +65,8 @@ public sealed record IntentoProcesamientoAutonomo(
 public interface IRegistroProcesamientoAutonomo
 {
     Task<List<Guid>> UsuariosConPendientesAsync(CancellationToken ct = default);
+    Task<List<Guid>> UsuariosHabilitadosAsync(CancellationToken ct = default) =>
+        UsuariosConPendientesAsync(ct);
     // Implementación predeterminada para no romper los adaptadores existentes.
     Task RegistrarFalloUsuarioAsync(Guid usuarioId, Exception error, CancellationToken ct = default) => Task.CompletedTask;
     Task<int> CupoConsumidoAsync(Guid usuarioId, DateTime inicioUtc, DateTime finUtc, CancellationToken ct = default);
