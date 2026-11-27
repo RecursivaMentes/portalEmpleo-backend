@@ -76,6 +76,12 @@ public class AuthController(AuthService authService, IWebHostEnvironment environ
         if (!Guid.TryParse(userIdToken, out var userId))
             return Unauthorized(new { message = "Token invalido." });
 
+        if ((request.Nombre is not null && string.IsNullOrWhiteSpace(request.Nombre)) ||
+            (request.Apellido is not null && string.IsNullOrWhiteSpace(request.Apellido)))
+        {
+            return BadRequest(new { message = "El nombre y el apellido no pueden estar vacíos." });
+        }
+
         if (request.Nombre is null &&
             request.Apellido is null &&
             request.Telefono is null &&
