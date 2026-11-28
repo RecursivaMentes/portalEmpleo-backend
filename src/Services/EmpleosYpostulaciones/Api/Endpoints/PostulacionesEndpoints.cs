@@ -43,6 +43,15 @@ public static class PostulacionesEndpoints
                 PostulacionResponse.DesdeEntidad(postulacion));
         });
 
+        grupo.MapGet("/ofertas/{empleoId:guid}/disponibilidad-manual", async (Guid empleoId,
+            ClaimsPrincipal usuario, PostulacionService servicio, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
+                return Results.Unauthorized();
+            await servicio.ValidarInicioManualAsync(usuarioId, empleoId, ct);
+            return Results.NoContent();
+        });
+
         grupo.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal usuario,
             PostulacionService servicio, CancellationToken ct) =>
         {

@@ -54,6 +54,19 @@ public sealed class PreparacionesService(
         return preparacion;
     }
 
+    public async Task ValidarSinPostulacionAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default)
+    {
+        if (usuarioId == Guid.Empty || empleoId == Guid.Empty) throw PostulacionException.DatosInvalidos();
+        if (await postulaciones.ExistePostulacionAsync(usuarioId, empleoId, ct))
+            throw PostulacionException.Duplicada();
+    }
+
+    public Task<PreparacionPostulacion?> ObtenerUltimoResultadoAsync(Guid usuarioId, CancellationToken ct = default) =>
+        repository.ObtenerUltimoResultadoAsync(usuarioId, ct);
+
+    public Task<PreparacionPostulacion?> ObtenerUltimaAsync(Guid usuarioId, CancellationToken ct = default) =>
+        repository.ObtenerUltimaPreparacionAsync(usuarioId, ct);
+
     public Task<List<PreparacionPostulacion>> ListarAsync(Guid usuarioId, CancellationToken ct = default) =>
         repository.ListarPreparacionesAsync(usuarioId, ct);
 

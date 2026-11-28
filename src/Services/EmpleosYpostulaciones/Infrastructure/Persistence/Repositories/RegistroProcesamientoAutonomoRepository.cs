@@ -15,6 +15,31 @@ public sealed class RegistroProcesamientoAutonomoRepository(AppDbContext db,
         return Task.CompletedTask;
     }
 
+    public Task RegistrarCantidadUsuariosAsync(int cantidad, CancellationToken ct = default)
+    {
+        logger?.LogInformation("Cuentas candidatas al ciclo autónomo: {Cantidad}", cantidad);
+        return Task.CompletedTask;
+    }
+
+    public async Task<CupoDiarioAgente?> ObtenerCupoDiarioAsync(Guid usuarioId, CancellationToken ct = default)
+    {
+        var config = await db.ConfiguracionesOperativas.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.UsuarioId == usuarioId, ct);
+        if (config is null) return null;
+        var (inicio, fin) = ProcesamientoAutonomoService.DiaLocalUtc(DateTime.UtcNow, config.ZonaHoraria);
+        return new CupoDiarioAgente(await CupoConsumidoAsync(usuarioId, inicio, fin, ct), config.LimiteDiario);
+    }
+
+    public Task<string?> ModoOperativoAsync(Guid usuarioId, CancellationToken ct = default) =>
+        db.ConfiguracionesOperativas.AsNoTracking().Where(c => c.UsuarioId == usuarioId)
+            .Select(c => c.Modo).FirstOrDefaultAsync(ct);
+
+    public Task RegistrarEvaluacionAsync(Guid usuarioId, string estado, int? candidatos = null, CancellationToken ct = default)
+    {
+        logger?.LogInformation("Agente usuario {UsuarioId}: {Estado}. Candidatos: {Candidatos}", usuarioId, estado, candidatos);
+        return Task.CompletedTask;
+    }
+
     public Task<List<Guid>> UsuariosConPendientesAsync(CancellationToken ct = default) =>
         db.EmpleosPendientes.AsNoTracking().Select(x => x.UsuarioId).Distinct().ToListAsync(ct);
 

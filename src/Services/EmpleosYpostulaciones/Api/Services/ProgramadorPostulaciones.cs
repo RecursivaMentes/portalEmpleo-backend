@@ -18,7 +18,9 @@ public sealed class ProgramadorPostulaciones(
         logger.LogInformation("Postulaciones IA: integración Chatbot={Integracion}, ciclo autónomo={Procesamiento}, intervalo={Minutos} min.",
             configuracion.GetValue<bool>("PostulacionesIA:IntegracionChatbotHabilitada"),
             configuracion.GetValue<bool>("PostulacionesIA:ProcesamientoHabilitado"), minutos);
-        using var reloj = new PeriodicTimer(TimeSpan.FromMinutes(minutos));
+        var segundos = Math.Clamp(configuracion.GetValue<int?>("PostulacionesIA:IntervaloSegundos") ?? minutos * 60, 10, 3600);
+        logger.LogInformation("Intervalo efectivo del agente: {Segundos} segundos.", segundos);
+        using var reloj = new PeriodicTimer(TimeSpan.FromSeconds(segundos));
         do
         {
             try

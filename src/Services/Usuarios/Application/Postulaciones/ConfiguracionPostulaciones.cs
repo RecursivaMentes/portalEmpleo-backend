@@ -20,5 +20,5 @@ public sealed record ConfiguracionPostulaciones(
 {
     // El usuario no activa el procesamiento autonomo por omision.
     public static ConfiguracionPostulaciones Predeterminada() =>
-        new("Desactivada", 60, 5, PreferenciasLaborales.Vacias(), "Prioridad", "America/Argentina/Buenos_Aires");
+        new("Desactivada", 50, 5, PreferenciasLaborales.Vacias(), "Prioridad", "America/Argentina/Buenos_Aires");
 }

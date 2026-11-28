@@ -86,7 +86,8 @@ public sealed class ConfirmacionPreparacionRepository(AppDbContext db) : IConfir
             if (empleo.Estado != EstadoEmpleo.Publicado) throw PostulacionException.OfertaNoDisponible();
             if (empleo.FechaCierre.HasValue && empleo.FechaCierre.Value <= DateTime.UtcNow)
                 throw PostulacionException.OfertaFinalizada();
-            if (await db.Postulaciones.AnyAsync(x => x.UsuarioId == usuarioId && x.EmpleoId == prep.EmpleoId, ct))
+            if (await db.Postulaciones.AnyAsync(x => x.UsuarioId == usuarioId && x.EmpleoId == prep.EmpleoId &&
+                x.Estado != EstadoPostulacion.Retirada, ct))
                 throw PostulacionException.Duplicada();
 
             if (cupo is not null && !prep.ContabilizadaEnCupo)

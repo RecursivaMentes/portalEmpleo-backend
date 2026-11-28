@@ -82,18 +82,16 @@ public sealed class ConsultasAutonomasHttpClient(IHttpClientFactory fabrica, ICo
         if (compatibilidadMinima.HasValue)
             ruta += $"?compatibilidadMinima={compatibilidadMinima.Value}";
         using var respuesta = await ConsultarAsync("RecomendacionesOrdenPendientes", ruta, ct);
-        List<CompatibilidadInterna> resultados = [];
-        if (respuesta.StatusCode != HttpStatusCode.NotFound)
+        // Un 404 no es una lista de recomendaciones vacia. Puede indicar que
+        // el perfil interno o la ruta no estan disponibles.
+        try { respuesta.EnsureSuccessStatusCode(); }
+        catch (HttpRequestException ex)
         {
-            try { respuesta.EnsureSuccessStatusCode(); }
-            catch (HttpRequestException ex)
-            {
-                throw new ServicioDependienteException("Recomendaciones",
-                    "No fue posible consultar las compatibilidades.", ex);
-            }
-            resultados = await respuesta.Content.ReadFromJsonAsync<List<CompatibilidadInterna>>(
-                cancellationToken: ct) ?? throw new System.Text.Json.JsonException("Compatibilidades vacias.");
+            throw new ServicioDependienteException("Recomendaciones",
+                $"No fue posible consultar las compatibilidades (HTTP {(int)respuesta.StatusCode}).", ex);
         }
+        var resultados = await respuesta.Content.ReadFromJsonAsync<List<CompatibilidadInterna>>(
+            cancellationToken: ct) ?? throw new System.Text.Json.JsonException("Compatibilidades vacias.");
         var pref = configuracion.Preferencias;
         return new DatosExternosOrdenamiento(
             configuracion.OrdenPendientes ?? "Prioridad",

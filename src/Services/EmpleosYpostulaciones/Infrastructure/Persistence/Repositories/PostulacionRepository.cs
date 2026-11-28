@@ -29,6 +29,17 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
                 cancellationToken);
     }
 
+    public async Task ValidarInicioManualAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default)
+    {
+        if (await ExistePostulacionAsync(usuarioId, empleoId, ct)) throw PostulacionException.Duplicada();
+        if (await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p =>
+            p.UsuarioId == usuarioId && p.EmpleoId == empleoId &&
+            p.Estado != EstadoPreparacionPostulacion.Cancelada &&
+            p.Estado != EstadoPreparacionPostulacion.Fallida &&
+            p.Estado != EstadoPreparacionPostulacion.Enviada, ct))
+            throw PostulacionException.PreparacionEnCursoOferta();
+    }
+
     public async Task AgregarAsync(Postulacion postulacion, CancellationToken ct = default)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -41,6 +52,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
                 x.UsuarioId == postulacion.UsuarioId && x.ExpiraUtc > DateTime.UtcNow, ct))
                 throw PostulacionException.CambioUsuarioEnCurso();
             await BloqueoOfertaUsuario.TomarAsync(db, postulacion.UsuarioId, postulacion.EmpleoId, ct);
+            await ValidarInicioManualAsync(postulacion.UsuarioId, postulacion.EmpleoId, ct);
             var iaActiva = await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p =>
                 p.UsuarioId == postulacion.UsuarioId &&
                 (p.Estado == EstadoPreparacionPostulacion.Preparando ||
@@ -63,19 +75,8 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
             var pendiente = await db.EmpleosPendientes.FirstOrDefaultAsync(x =>
                 x.UsuarioId == postulacion.UsuarioId && x.EmpleoId == postulacion.EmpleoId, ct);
             if (pendiente is not null) db.EmpleosPendientes.Remove(pendiente);
-            // Si el usuario envio manualmente, sus borradores de ESA oferta quedan
-            // cerrados, sin tocar borradores de otras ofertas ni relanzar la IA.
-            var borradores = await db.PreparacionesPostulacion.Where(p =>
-                p.UsuarioId == postulacion.UsuarioId && p.EmpleoId == postulacion.EmpleoId &&
-                (p.Estado == EstadoPreparacionPostulacion.PendienteAprobacion ||
-                 p.Estado == EstadoPreparacionPostulacion.PendienteAprobacionCv)).ToListAsync(ct);
-            foreach (var borrador in borradores)
-            {
-                borrador.Estado = EstadoPreparacionPostulacion.Cancelada;
-                borrador.PostulacionId = postulacion.Id;
-                borrador.VersionEdicion++;
-                borrador.FechaActualizacion = DateTime.UtcNow;
-            }
+            // La reserva de una preparación no finalizada impide el envío manual de esa oferta.
+
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         }
@@ -93,13 +94,37 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         }
     }
     // Seleccionar solo el resumen evita cargar el documento histórico (bytea).
-        // Ocultar del historial personal no borra la postulación ni su CV histórico.
+    // Eliminación efectiva: sólo una postulación retirada o finalizada.
     public async Task<bool> OcultarParaUsuarioAsync(Guid postulacionId, Guid usuarioId, CancellationToken ct = default)
     {
-        var filas = await db.Postulaciones.Where(p => p.Id == postulacionId && p.UsuarioId == usuarioId && !p.OcultaParaUsuario)
-            .ExecuteUpdateAsync(s => s.SetProperty(p => p.OcultaParaUsuario, true), ct);
-        return filas == 1;
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);
+        var referencia = await db.Postulaciones.AsNoTracking().Where(p => p.Id == postulacionId && p.UsuarioId == usuarioId)
+            .Select(p => new { p.EmpleoId }).SingleOrDefaultAsync(ct);
+        if (referencia is null) return false;
+        await BloqueoOfertaUsuario.TomarAsync(db, usuarioId, referencia.EmpleoId, ct);
+        var postulacion = await db.Postulaciones.FromSqlInterpolated(
+            $"SELECT * FROM postulaciones WHERE \"Id\" = {postulacionId} AND \"UsuarioId\" = {usuarioId} FOR UPDATE")
+            .SingleOrDefaultAsync(ct);
+        if (postulacion is null) return false;
+        if (postulacion.Estado is not (EstadoPostulacion.Retirada or EstadoPostulacion.Aceptada or EstadoPostulacion.Rechazada))
+            throw PostulacionException.EliminarPostulacionActiva();
+        // Las preparaciones e intentos permanecen: no se reintegra el cupo diario.
+        await db.PreparacionesPostulacion.Where(p => p.PostulacionId == postulacionId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.PostulacionId, (Guid?)null), ct);
+        if (!await db.Postulaciones.AsNoTracking().AnyAsync(p => p.UsuarioId == usuarioId &&
+                p.EmpleoId == referencia.EmpleoId && p.Id != postulacionId && p.Estado != EstadoPostulacion.Retirada, ct) &&
+            !await db.PreparacionesPostulacion.AsNoTracking().AnyAsync(p => p.UsuarioId == usuarioId &&
+                p.EmpleoId == referencia.EmpleoId && p.Estado != EstadoPreparacionPostulacion.Cancelada &&
+                p.Estado != EstadoPreparacionPostulacion.Fallida && p.Estado != EstadoPreparacionPostulacion.Enviada, ct) &&
+            !await db.OfertasDescartadas.AnyAsync(p => p.UsuarioId == usuarioId && p.EmpleoId == referencia.EmpleoId, ct))
+            db.OfertasDescartadas.Add(new OfertaDescartada { UsuarioId = usuarioId, EmpleoId = referencia.EmpleoId });
+        db.Postulaciones.Remove(postulacion);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return true;
     }
+
     private static IQueryable<Postulacion> SinDocumento(IQueryable<Postulacion> consulta) =>
         consulta.Select(p => new Postulacion
         {
@@ -115,7 +140,7 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         Guid usuarioId,
         CancellationToken cancellationToken = default)
     {
-        return SinDocumento(db.Postulaciones.AsNoTracking().Where(p => p.UsuarioId == usuarioId && !p.OcultaParaUsuario))
+        return SinDocumento(db.Postulaciones.AsNoTracking().Where(p => p.UsuarioId == usuarioId))
             .OrderByDescending(p => p.FechaPostulacion)
             .ToListAsync(cancellationToken);
     }
@@ -145,6 +170,11 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         try
         {
+            var referencia = await db.Postulaciones.AsNoTracking().Where(p => p.Id == postulacionId)
+                .Select(p => new { p.UsuarioId, p.EmpleoId }).SingleOrDefaultAsync(ct);
+            if (referencia is null) return null;
+            await BloqueoCupoPostulacion.TomarAsync(db, referencia.UsuarioId, ct);
+            await BloqueoOfertaUsuario.TomarAsync(db, referencia.UsuarioId, referencia.EmpleoId, ct);
             var p = await db.Postulaciones.FromSqlInterpolated(
                 $"SELECT * FROM postulaciones WHERE \"Id\" = {postulacionId} FOR UPDATE")
                 .SingleOrDefaultAsync(ct);
@@ -164,6 +194,9 @@ public class PostulacionRepository(AppDbContext db) : IPostulacionRepository
                 p.HistorialEstadosJson = System.Text.Json.JsonSerializer.Serialize(entradas,
                     new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
                 p.Estado = nuevo;
+                if (esPostulante && nuevo == EstadoPostulacion.Retirada &&
+                    !await db.OfertasDescartadas.AnyAsync(x => x.UsuarioId == p.UsuarioId && x.EmpleoId == p.EmpleoId, ct))
+                    db.OfertasDescartadas.Add(new OfertaDescartada { UsuarioId = p.UsuarioId, EmpleoId = p.EmpleoId });
                 await db.SaveChangesAsync(ct);
             }
             await tx.CommitAsync(ct);

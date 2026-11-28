@@ -17,7 +17,7 @@ public class ConfiguracionPostulacionesTests
 
         Assert.NotNull(config);
         Assert.Equal("Desactivada", config.Modo);
-        Assert.Equal(60, config.CompatibilidadMinima);
+        Assert.Equal(50, config.CompatibilidadMinima);
         Assert.Equal(5, config.LimiteDiario);
         Assert.Equal(0, repo.Actualizaciones);
     }
@@ -80,7 +80,9 @@ public class ConfiguracionPostulacionesTests
     }
 
     [Theory]
+    [InlineData(-1)]
     [InlineData(0)]
+    [InlineData(49)]
     [InlineData(101)]
     public async Task CompatibilidadFueraDeRango_NoGuarda(int minimo)
     {

@@ -16,9 +16,11 @@ public sealed class SolicitudUsuarioIAService(
     {
         if (!preparador.Disponible)
             throw new InvalidOperationException("La integracion del preparador IA no esta habilitada.");
+        await preparaciones.ValidarSinPostulacionAsync(usuarioId, empleoId, ct);
         var configuracion = await consultas.ConfiguracionAsync(usuarioId, ct)
             ?? throw PostulacionException.DatosInvalidos();
         // Si ya existe trabajo para esta oferta, devolverlo sin llamar otra vez a IA.
+        // La validación de una postulación vigente se hace antes de reutilizarlo.
         var existente = (await repositorio.ListarPreparacionesAsync(usuarioId, ct))
             .Where(x => x.EmpleoId == empleoId && x.Estado is not (
                 EstadoPreparacionPostulacion.Cancelada or EstadoPreparacionPostulacion.Fallida or
@@ -49,6 +51,7 @@ public sealed class SolicitudUsuarioIAService(
         preparacion.ModoEjecucion = configuracion.Modo ?? "Desactivada";
         try
         {
+            await repositorio.GuardarPreparacionAsync(preparacion, ct);
             var resultado = await preparador.PrepararAsync(usuarioId, empleoId, ct);
             // No alterar una preparacion si se solicito cancelacion durante la inferencia.
             var actual = await repositorio.ObtenerEstadoVigenteAsync(preparacion.Id, usuarioId, ct)
@@ -89,15 +92,19 @@ public sealed class SolicitudUsuarioIAService(
             return await preparaciones.ObtenerAsync(actual.Id, usuarioId, ct) ?? actual;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch
+        catch (Exception ex)
         {
             var vigente = await repositorio.ObtenerEstadoVigenteAsync(preparacion.Id, usuarioId,
                 CancellationToken.None);
-            if (vigente?.Estado is EstadoPreparacionPostulacion.CancelacionSolicitada or
-                EstadoPreparacionPostulacion.Preparando)
+            if (vigente is not null && (vigente.Estado is EstadoPreparacionPostulacion.CancelacionSolicitada or
+                EstadoPreparacionPostulacion.Preparando ||
+                (vigente.Estado == EstadoPreparacionPostulacion.PendienteAprobacion &&
+                 ex is PostulacionException { CodigoError: "POSTULACION_DUPLICADA" })))
             {
                 vigente.Estado = vigente.Estado == EstadoPreparacionPostulacion.CancelacionSolicitada
                     ? EstadoPreparacionPostulacion.Cancelada : EstadoPreparacionPostulacion.Fallida;
+                vigente.UltimoError = vigente.Estado == EstadoPreparacionPostulacion.Fallida
+                    ? "No se pudo completar la preparación. Volvé a intentarlo." : null;
                 vigente.VersionEdicion++;
                 vigente.FechaActualizacion = DateTime.UtcNow;
                 await repositorio.GuardarPreparacionAsync(vigente, CancellationToken.None);

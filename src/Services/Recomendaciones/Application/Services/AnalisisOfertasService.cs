@@ -69,7 +69,7 @@ public class AnalisisOfertasService
         Guid usuarioId, string claveInterna, CancellationToken ct = default,
         int? compatibilidadMinima = null)
     {
-        if (compatibilidadMinima is < 1 or > 100)
+        if (compatibilidadMinima is < 0 or > 100)
             throw new ArgumentOutOfRangeException(nameof(compatibilidadMinima));
         var perfil = await _usuariosClient.ObtenerPerfilInternoAsync(usuarioId, claveInterna, ct);
         if (perfil is null) return null;

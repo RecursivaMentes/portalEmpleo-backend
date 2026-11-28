@@ -145,16 +145,32 @@ public static class PendientesYPreparacionesEndpoints
 
         grupo.MapGet("/preparaciones/activa/me", async (
             ClaimsPrincipal usuario, PreparacionesService servicio,
-            IRegistroProcesamientoAutonomo registro, IConfiguration configuracion, CancellationToken ct) =>
+            IRegistroProcesamientoAutonomo registro, IConfiguration configuracion,
+            DiagnosticoAgentePostulaciones diagnostico, CancellationToken ct) =>
         {
             if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var usuarioId))
                 return Results.Unauthorized();
             var (disponible, preparacion) = await servicio.DisponibilidadAsync(usuarioId, ct);
             var empleo = preparacion is null ? null : await registro.ObtenerOfertaAsync(preparacion.EmpleoId, ct);
+            var ultima = await servicio.ObtenerUltimaAsync(usuarioId, ct);
+            var ultimoResultado = await servicio.ObtenerUltimoResultadoAsync(usuarioId, ct);
+            var ultimaOferta = ultima is null ? null : ultima.EmpleoId == empleo?.Id ? empleo :
+                await registro.ObtenerOfertaAsync(ultima.EmpleoId, ct);
             return Results.Ok(new
             {
                 disponible,
                 preparacion,
+                ultimaPreparacion = ultima is null ? null : new { ultima.Id, ultima.EmpleoId, ultima.Estado,
+                    ultima.Origen, ultima.VersionEdicion, ultima.FechaActualizacion, ultima.PostulacionId,
+                    titulo = ultimaOferta?.Titulo },
+                ultimoResultado = ultimoResultado is null ? null : new { ultimoResultado.Id, ultimoResultado.Estado,
+                    ultimoResultado.PostulacionId, ultimoResultado.EmpleoId, ultimoResultado.FechaActualizacion },
+                evaluacion = diagnostico.Obtener(usuarioId),
+                modo = await registro.ModoOperativoAsync(usuarioId, ct),
+                cupoDiario = await registro.ObtenerCupoDiarioAsync(usuarioId, ct),
+                intervaloSegundos = Math.Clamp(configuracion.GetValue<int?>("PostulacionesIA:IntervaloSegundos") ??
+                    Math.Clamp(configuracion.GetValue<int?>("PostulacionesIA:IntervaloMinutos") ?? 2, 1, 60) * 60, 10, 3600),
+                intervaloMinutos = Math.Clamp(configuracion.GetValue<int?>("PostulacionesIA:IntervaloMinutos") ?? 2, 1, 60),
                 oferta = empleo is null ? null : new { empleo.Id, empleo.Titulo, empleo.EmpresaId },
                 integracionHabilitada = configuracion.GetValue<bool>("PostulacionesIA:IntegracionChatbotHabilitada"),
                 procesamientoHabilitado = configuracion.GetValue<bool>("PostulacionesIA:ProcesamientoHabilitado")

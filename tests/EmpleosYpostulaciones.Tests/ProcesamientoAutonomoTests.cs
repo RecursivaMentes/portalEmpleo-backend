@@ -72,7 +72,7 @@ public sealed class ProcesamientoAutonomoTests
     }
 
     [Fact]
-    public void RecomendacionesRespetanPreferenciasYExclusiones()
+    public void RecomendacionesNoFiltranPreferenciasPeroRespetanExclusiones()
     {
         var ahora = DateTime.UtcNow;
         var oferta = new Empleo { Estado = EstadoEmpleo.Publicado, Titulo = "Desarrollador Backend",
@@ -83,7 +83,9 @@ public sealed class ProcesamientoAutonomoTests
         Assert.True(ProcesamientoAutonomoService.Elegible(oferta, preferencias,
             PreparacionPostulacion.FuenteRecomendaciones, ahora));
         oferta.SalarioMin = null;
-        Assert.False(ProcesamientoAutonomoService.Elegible(oferta, preferencias,
+        oferta.Ubicacion = "Otra ubicación";
+        oferta.Titulo = "Otro puesto";
+        Assert.True(ProcesamientoAutonomoService.Elegible(oferta, preferencias,
             PreparacionPostulacion.FuenteRecomendaciones, ahora));
         Assert.True(ProcesamientoAutonomoService.Elegible(oferta, preferencias,
             PreparacionPostulacion.FuentePendientes, ahora));
@@ -94,6 +96,57 @@ public sealed class ProcesamientoAutonomoTests
         oferta.FechaCierre = ahora;
         Assert.False(ProcesamientoAutonomoService.Elegible(oferta, null,
             PreparacionPostulacion.FuenteRecomendaciones, ahora));
+    }
+
+    [Fact]
+    public void PendientesSinMinimoYRecomendacionesConPisoDe50()
+    {
+        var ahora = DateTime.UtcNow;
+        var usuario = Guid.NewGuid();
+        var baja = Guid.NewGuid(); var sinPuntaje = Guid.NewGuid();
+        var recomendada = Guid.NewGuid(); var inferior = Guid.NewGuid();
+        var guardadas = new List<OfertaPendienteDatos>
+        {
+            new(usuario, baja, ahora.AddDays(-2), "Baja", null, null,
+                ModalidadTrabajo.Remoto, TipoContrato.TiempoCompleto, null),
+            new(usuario, sinPuntaje, ahora.AddDays(-1), "Sin puntaje", null, null,
+                ModalidadTrabajo.Remoto, TipoContrato.TiempoCompleto, null)
+        };
+        var datos = new DatosExternosOrdenamiento("Antiguos", null, new Dictionary<Guid, decimal>
+        { [baja] = 0, [recomendada] = 50, [inferior] = 49 });
+        var candidatos = OrdenamientoPendientesService.SeleccionarCandidatos(guardadas, datos,
+            new HashSet<Guid>(), 0, ahora);
+        Assert.Equal(new[] { baja, sinPuntaje, recomendada }, candidatos.Select(x => x.EmpleoId));
+        Assert.Equal(new[] { baja, sinPuntaje }, OrdenamientoPendientesService.SeleccionarCandidatos(
+            guardadas, datos, new HashSet<Guid>(), 90, ahora).Select(x => x.EmpleoId));
+    }
+
+    [Fact]
+    public async Task SinPendientes_ConsultaRecomendacionesYRespetaSuOrden()
+    {
+        var alta = Guid.NewGuid();
+        var igualAlMinimo = Guid.NewGuid();
+        var inferior = Guid.NewGuid();
+        var datos = new DatosExternosOrdenamiento("Prioridad", null, new Dictionary<Guid, decimal>
+        { [inferior] = 49, [igualAlMinimo] = 50, [alta] = 95 });
+        var servicio = new OrdenamientoPendientesService(new SinPendientesRepo(),
+            new RecomendacionesInternasFalsas(datos), new RecomendacionesInternasFalsas(datos));
+        var candidatos = await servicio.ListarCandidatosInternosAsync(Guid.NewGuid(), 50);
+        Assert.Equal(new[] { alta, igualAlMinimo }, candidatos.Select(x => x.EmpleoId));
+        Assert.All(candidatos, x => Assert.Equal(PreparacionPostulacion.FuenteRecomendaciones, x.FuenteOferta));
+    }
+
+    private sealed class SinPendientesRepo : IOrdenamientoPendientesRepository
+    {
+        public Task<List<OfertaPendienteDatos>> ObtenerPendientesAsync(Guid usuarioId, CancellationToken ct = default) =>
+            Task.FromResult(new List<OfertaPendienteDatos>());
+    }
+
+    private sealed class RecomendacionesInternasFalsas(DatosExternosOrdenamiento datos) :
+        IDatosExternosOrdenamiento, IDatosExternosOrdenamientoInterno
+    {
+        public Task<DatosExternosOrdenamiento> ObtenerAsync(Guid usuarioId, string accessToken, CancellationToken ct = default) => Task.FromResult(datos);
+        public Task<DatosExternosOrdenamiento> ObtenerInternoAsync(Guid usuarioId, CancellationToken ct = default) => Task.FromResult(datos);
     }
 
     [Fact]

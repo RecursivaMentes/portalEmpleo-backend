@@ -75,9 +75,9 @@ public sealed class OrdenamientoPendientesService(
         int compatibilidadMinima, CancellationToken ct = default)
     {
         if (internos is null) throw new InvalidOperationException("Ordenamiento interno no configurado.");
-        if (compatibilidadMinima is < 1 or > 100) throw PostulacionException.DatosInvalidos();
+        if (compatibilidadMinima is < 0 or > 100) throw PostulacionException.DatosInvalidos();
         var guardadas = await pendientes.ObtenerPendientesAsync(usuarioId, ct);
-        var datos = await internos.ObtenerInternoAsync(usuarioId, compatibilidadMinima, ct);
+        var datos = await internos.ObtenerInternoAsync(usuarioId, ct);
         var descartadas = preparaciones is null ? new HashSet<Guid>() :
             (await preparaciones.ListarDescartadasAsync(usuarioId, ct)).ToHashSet();
         return SeleccionarCandidatos(guardadas, datos, descartadas, compatibilidadMinima, DateTime.UtcNow);
@@ -89,13 +89,13 @@ public sealed class OrdenamientoPendientesService(
     {
         var idsGuardadas = guardadas.Select(x => x.EmpleoId).ToHashSet();
         bool ScoreValido(Guid id) => datos.Compatibilidades.TryGetValue(id, out var score) &&
-            score >= compatibilidadMinima && score <= 100m && !descartadas.Contains(id);
+            score >= Math.Max(50, compatibilidadMinima) && score <= 100m && !descartadas.Contains(id);
         var candidatos = Ordenar(guardadas, datos, ahora)
-            .Where(x => x.Disponible && ScoreValido(x.EmpleoId))
-            .Select(x => new CandidatoPostulacionIA(x.EmpleoId, x.Compatibilidad!.Value,
+            .Where(x => x.Disponible && !descartadas.Contains(x.EmpleoId))
+            .Select(x => new CandidatoPostulacionIA(x.EmpleoId, x.Compatibilidad ?? 0m,
                 PreparacionPostulacion.FuentePendientes)).ToList();
         candidatos.AddRange(datos.Compatibilidades.Where(x => !idsGuardadas.Contains(x.Key) && ScoreValido(x.Key))
-            .OrderByDescending(x => x.Value).ThenBy(x => x.Key)
+            .OrderByDescending(x => x.Value)
             .Select(x => new CandidatoPostulacionIA(x.Key, x.Value, PreparacionPostulacion.FuenteRecomendaciones)));
         return candidatos;
     }

@@ -117,6 +117,17 @@ public sealed class PendientesYPreparacionesRepository(AppDbContext db) : IPendi
         await tx.CommitAsync(ct);
     }
 
+    public Task<PreparacionPostulacion?> ObtenerUltimoResultadoAsync(Guid usuarioId, CancellationToken ct = default) =>
+        db.PreparacionesPostulacion.AsNoTracking().Where(x => x.UsuarioId == usuarioId &&
+            (x.Estado == EstadoPreparacionPostulacion.PendienteAprobacion ||
+             x.Estado == EstadoPreparacionPostulacion.PendienteAprobacionCv ||
+             (x.Estado == EstadoPreparacionPostulacion.Enviada && x.PostulacionId.HasValue)))
+            .OrderByDescending(x => x.FechaActualizacion).ThenByDescending(x => x.Id).FirstOrDefaultAsync(ct);
+
+    public Task<PreparacionPostulacion?> ObtenerUltimaPreparacionAsync(Guid usuarioId, CancellationToken ct = default) =>
+        db.PreparacionesPostulacion.AsNoTracking().Where(x => x.UsuarioId == usuarioId)
+            .OrderByDescending(x => x.FechaActualizacion).ThenByDescending(x => x.Id).FirstOrDefaultAsync(ct);
+
     public Task<List<PreparacionPostulacion>> ListarPreparacionesAsync(Guid usuarioId, CancellationToken ct = default) =>
         db.PreparacionesPostulacion.AsNoTracking().Where(x => x.UsuarioId == usuarioId)
             .OrderByDescending(x => x.FechaCreacion).ToListAsync(ct);

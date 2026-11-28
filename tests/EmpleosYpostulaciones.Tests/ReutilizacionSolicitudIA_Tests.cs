@@ -30,6 +30,21 @@ public sealed class ReutilizacionSolicitudIA_Tests
         Assert.Same(preparacion, segunda);
         Assert.Equal(0, agente.Veces);
     }
+    [Fact]
+    public async Task PostulacionVigente_RechazaAntesDeConsultarIAOReutilizarPreparacion()
+    {
+        var usuario = Guid.NewGuid(); var empleo = Guid.NewGuid();
+        var repo = new RepoFalso();
+        repo.Preparaciones.Add(new PreparacionPostulacion { Id = Guid.NewGuid(), UsuarioId = usuario,
+            EmpleoId = empleo, Estado = EstadoPreparacionPostulacion.PendienteAprobacion });
+        var agente = new PreparadorFalso();
+        var servicio = new SolicitudUsuarioIAService(new PreparacionesService(repo,
+            new PostulacionesFalsas { YaPostulado = true }), repo, new ConsultaFalsa(), agente, null!, null!);
+        var error = await Assert.ThrowsAsync<PostulacionException>(() => servicio.SolicitarAsync(usuario, empleo));
+        Assert.Equal("POSTULACION_DUPLICADA", error.CodigoError);
+        Assert.Equal(0, agente.Veces);
+    }
+
     private sealed class PreparadorFalso : IPreparadorPostulacionesIA
     {
         public bool Disponible => true;
@@ -67,7 +82,8 @@ public sealed class ReutilizacionSolicitudIA_Tests
     private sealed class PostulacionesFalsas : IPostulacionRepository
     {
         public Task<Empleo?> ObtenerEmpleoAsync(Guid e, CancellationToken ct = default) => Task.FromResult<Empleo?>(new Empleo { Id = e, Estado = EstadoEmpleo.Publicado });
-        public Task<bool> ExistePostulacionAsync(Guid u, Guid e, CancellationToken ct = default) => Task.FromResult(false);
+        public bool YaPostulado { get; init; }
+        public Task<bool> ExistePostulacionAsync(Guid u, Guid e, CancellationToken ct = default) => Task.FromResult(YaPostulado);
         public Task AgregarAsync(Postulacion p, CancellationToken ct = default) => Task.CompletedTask;
         public Task<List<Postulacion>> ObtenerPorUsuarioAsync(Guid u, CancellationToken ct = default) => Task.FromResult(new List<Postulacion>());
         public Task<Postulacion?> ObtenerPorIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<Postulacion?>(null);

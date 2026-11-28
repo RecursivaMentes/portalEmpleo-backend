@@ -12,9 +12,16 @@ public class PostulacionService(IPostulacionRepository repository, ICvValidation
         string token,
         CancellationToken cancellationToken = default)
     {
+        await ValidarInicioManualAsync(request.UsuarioId, request.EmpleoId, cancellationToken);
         var creada = await ValidarYConstruirAsync(request, token, cancellationToken);
         await repository.AgregarAsync(creada, cancellationToken);
         return creada;
+    }
+
+    public Task ValidarInicioManualAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default)
+    {
+        if (usuarioId == Guid.Empty || empleoId == Guid.Empty) throw PostulacionException.DatosInvalidos();
+        return repository.ValidarInicioManualAsync(usuarioId, empleoId, ct);
     }
 
     // Misma regla de negocio para usuario autenticado e integracion interna.

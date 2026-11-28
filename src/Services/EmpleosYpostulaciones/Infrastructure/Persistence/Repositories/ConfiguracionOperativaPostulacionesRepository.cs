@@ -10,7 +10,7 @@ public sealed class ConfiguracionOperativaPostulacionesRepository(AppDbContext d
 {
     private static ConfiguracionProcesamiento Combinar(
         ConfiguracionOperativaPostulacion c, ConfiguracionProcesamiento legada) =>
-        new(c.Modo, c.CompatibilidadMinima, c.LimiteDiario,
+        new(c.Modo, Math.Clamp(c.CompatibilidadMinima, 50, 100), c.LimiteDiario,
             legada.Preferencias, c.OrdenPendientes, c.ZonaHoraria);
 
     public async Task<ConfiguracionProcesamiento> InicializarOLeerAsync(Guid usuarioId,
@@ -29,7 +29,7 @@ public sealed class ConfiguracionOperativaPostulacionesRepository(AppDbContext d
             {
                 UsuarioId = usuarioId,
                 Modo = legada.Modo ?? "Desactivada",
-                CompatibilidadMinima = legada.CompatibilidadMinima,
+                CompatibilidadMinima = Math.Clamp(legada.CompatibilidadMinima, 50, 100),
                 LimiteDiario = legada.LimiteDiario,
                 OrdenPendientes = legada.OrdenPendientes ?? "Prioridad",
                 ZonaHoraria = legada.ZonaHoraria ?? "America/Argentina/Buenos_Aires",
@@ -47,7 +47,7 @@ public sealed class ConfiguracionOperativaPostulacionesRepository(AppDbContext d
     {
         if (usuarioId == Guid.Empty || operacionId == Guid.Empty ||
             nueva.Modo is not ("Automatica" or "Asistida" or "Desactivada") ||
-            nueva.CompatibilidadMinima is < 1 or > 100 || nueva.LimiteDiario is < 1 or > 10)
+            nueva.CompatibilidadMinima is < 50 or > 100 || nueva.LimiteDiario is < 1 or > 10)
             throw PostulacionException.DatosInvalidos();
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await BloqueoCupoPostulacion.TomarAsync(db, usuarioId, ct);

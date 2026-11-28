@@ -24,8 +24,9 @@ public class PostulacionConfiguration : IEntityTypeConfiguration<Postulacion>
         builder.Property(x => x.UsuarioId).IsRequired();
         builder.Property(x => x.CvId).IsRequired();
 
-        // Un usuario solo puede postularse una vez a cada empleo.
-        builder.HasIndex(x => new { x.UsuarioId, x.EmpleoId }).IsUnique();
+        // Una única postulación no retirada por usuario y empleo.
+        builder.HasIndex(x => new { x.UsuarioId, x.EmpleoId }).IsUnique()
+            .HasFilter("\"Estado\" <> 'Retirada'");
 
         builder.HasIndex(x => x.CvId);
 

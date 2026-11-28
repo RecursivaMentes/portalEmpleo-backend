@@ -62,13 +62,20 @@ public sealed record IntentoProcesamientoAutonomo(
     Guid UsuarioId, Guid EmpleoId, Guid? PreparacionId,
     string Resultado, string? Motivo, DateTime FechaUtc);
 
+public sealed record CupoDiarioAgente(int Consumidas, int Limite);
+
 public interface IRegistroProcesamientoAutonomo
 {
+    Task<CupoDiarioAgente?> ObtenerCupoDiarioAsync(Guid usuarioId, CancellationToken ct = default) =>
+        Task.FromResult<CupoDiarioAgente?>(null);
     Task<List<Guid>> UsuariosConPendientesAsync(CancellationToken ct = default);
     Task<List<Guid>> UsuariosHabilitadosAsync(CancellationToken ct = default) =>
         UsuariosConPendientesAsync(ct);
     // Implementación predeterminada para no romper los adaptadores existentes.
     Task RegistrarFalloUsuarioAsync(Guid usuarioId, Exception error, CancellationToken ct = default) => Task.CompletedTask;
+    Task RegistrarCantidadUsuariosAsync(int cantidad, CancellationToken ct = default) => Task.CompletedTask;
+    Task<string?> ModoOperativoAsync(Guid usuarioId, CancellationToken ct = default) => Task.FromResult<string?>(null);
+    Task RegistrarEvaluacionAsync(Guid usuarioId, string estado, int? candidatos = null, CancellationToken ct = default) => Task.CompletedTask;
     Task<int> CupoConsumidoAsync(Guid usuarioId, DateTime inicioUtc, DateTime finUtc, CancellationToken ct = default);
     Task<int> IntentosEnPeriodoAsync(Guid usuarioId, Guid empleoId, DateTime desdeUtc, CancellationToken ct = default);
     Task<Empleo?> ObtenerOfertaAsync(Guid empleoId, CancellationToken ct = default);

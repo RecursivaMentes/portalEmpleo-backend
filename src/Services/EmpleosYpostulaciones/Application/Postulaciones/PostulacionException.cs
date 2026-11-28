@@ -49,6 +49,12 @@ public sealed class PostulacionException : Exception
     public static PostulacionException PendienteRetirado() =>
         new("PENDIENTE_RETIRADO", "Esta oferta ya no está en tus pendientes. No se enviará automáticamente.");
 
+    public static PostulacionException PreparacionEnCursoOferta() =>
+        new("PREPARACION_EN_CURSO_OFERTA", "Ya existe una preparación de IA para esta oferta. Revisala o cancelala antes de postularte manualmente.");
+
+    public static PostulacionException EliminarPostulacionActiva() =>
+        new("ELIMINAR_POSTULACION_ACTIVA", "Retirá la postulación antes de eliminarla.");
+
     public static PostulacionException PreparacionDuplicada() =>
         new("PREPARACION_DUPLICADA", "Ya existe una preparacion pendiente para esta oferta.");
 

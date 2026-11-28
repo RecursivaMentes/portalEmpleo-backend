@@ -42,6 +42,7 @@ public sealed class CompatibilidadInternaTests
         Assert.Equal(66.67m, oferta.Score);
         Assert.Contains("Docker", oferta.RequisitosFaltantes);
 
+        Assert.Single((await servicio.AnalizarInternoAsync(usuario, "clave-prueba", compatibilidadMinima: 0))!);
         var aceptadas = await servicio.AnalizarInternoAsync(usuario, "clave-prueba", compatibilidadMinima: 66);
         Assert.Single(aceptadas!);
         var rechazadas = await servicio.AnalizarInternoAsync(usuario, "clave-prueba", compatibilidadMinima: 67);

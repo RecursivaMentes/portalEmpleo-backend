@@ -97,8 +97,8 @@ public sealed class ConfiguracionPostulacionesService(IUsuarioRepository usuario
         else if (string.Equals(modo, "Desactivada", StringComparison.OrdinalIgnoreCase)) modo = "Desactivada";
         else throw new ValidationException("El modo debe ser Automatica, Asistida o Desactivada.");
 
-        if (solicitud.CompatibilidadMinima is < 1 or > 100)
-            throw new ValidationException("La compatibilidad mínima debe estar entre 1 y 100 %.");
+        if (solicitud.CompatibilidadMinima is < 50 or > 100)
+            throw new ValidationException("La compatibilidad mínima para recomendaciones debe estar entre 50 y 100 %.");
 
         if (solicitud.LimiteDiario is < 1 or > 10)
             throw new ValidationException("El límite diario debe estar entre 1 y 10.");

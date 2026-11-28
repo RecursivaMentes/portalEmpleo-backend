@@ -74,7 +74,7 @@ public sealed class AprobacionCvIAService(
             if (prep.Origen == OrigenPreparacionPostulacion.IniciativaIA)
             {
                 if (config.LimiteDiario is < 1 or > 10 ||
-                    config.CompatibilidadMinima is < 1 or > 100) return prep;
+                    config.CompatibilidadMinima is < 0 or > 100) return prep;
                 var (inicio, fin) = ProcesamientoAutonomoService.DiaLocalUtc(DateTime.UtcNow, config.ZonaHoraria);
                 if (await registro.CupoConsumidoAsync(usuarioId, inicio, fin, ct)
                     >= config.LimiteDiario) return prep;

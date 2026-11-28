@@ -1,5 +1,8 @@
 using Application.Postulaciones;
 using Domain.Enums;
+using Domain.Entities;
+using EmpleosYpostulaciones.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using EmpleosYpostulaciones.Infrastructure.Persistence.Repositories;
 using Xunit;
 
@@ -25,6 +28,19 @@ public sealed class ConsistenciaHistoriaYZonaTests
         Assert.False(PostulacionRepository.TransicionValida(EstadoPostulacion.EnRevision,
             EstadoPostulacion.Retirada, false));
     }
+    [Fact]
+    public void IndiceUnicoExcluyeRetiradas()
+    {
+        var opciones = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=localhost;Database=prueba_modelo;Username=postgres;Password=prueba")
+            .Options;
+        using var db = new AppDbContext(opciones);
+        var indice = db.Model.FindEntityType(typeof(Postulacion))!.GetIndexes()
+            .Single(x => x.Properties.Select(p => p.Name).SequenceEqual(new[] { "UsuarioId", "EmpleoId" }));
+        Assert.True(indice.IsUnique);
+        Assert.Equal("\"Estado\" <> 'Retirada'", indice.GetFilter());
+    }
+
     [Fact]
     public void NoPermitirVolverDesdeRechazada()
     {

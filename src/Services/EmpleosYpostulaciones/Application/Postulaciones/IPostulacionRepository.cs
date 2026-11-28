@@ -14,6 +14,9 @@ public interface IPostulacionRepository
         Guid empleoId,
         CancellationToken cancellationToken = default);
 
+    Task ValidarInicioManualAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
     Task AgregarAsync(
         Postulacion postulacion,
         CancellationToken cancellationToken = default);

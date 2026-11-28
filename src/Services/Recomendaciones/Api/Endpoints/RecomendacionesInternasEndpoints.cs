@@ -19,8 +19,8 @@ public static class RecomendacionesInternasEndpoints
                 var clave = configuracion["InternalServices:Recomendaciones:Key"];
                 if (string.IsNullOrWhiteSpace(clave))
                     return Results.Problem("Falta credencial interna de Recomendaciones.", statusCode: 503);
-                if (compatibilidadMinima is < 1 or > 100)
-                    return Results.BadRequest(new { mensaje = "La compatibilidad mínima debe estar entre 1 y 100." });
+                if (compatibilidadMinima is < 0 or > 100)
+                    return Results.BadRequest(new { mensaje = "La compatibilidad mínima debe estar entre 0 y 100." });
                 var resultados = await servicio.AnalizarInternoAsync(usuarioId, clave, ct, compatibilidadMinima);
                 return resultados is null ? Results.NotFound() : Results.Ok(resultados);
             });

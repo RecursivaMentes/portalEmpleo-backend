@@ -15,6 +15,13 @@ public interface IPendientesYPreparacionesRepository
     Task RestaurarOfertaAsync(Guid usuarioId, Guid empleoId, CancellationToken ct = default) =>
         throw new NotSupportedException("El repositorio no admite restaurar ofertas.");
 
+    async Task<PreparacionPostulacion?> ObtenerUltimoResultadoAsync(Guid usuarioId, CancellationToken ct = default) =>
+        (await ListarPreparacionesAsync(usuarioId, ct)).Where(x =>
+            x.Estado is Domain.Enums.EstadoPreparacionPostulacion.PendienteAprobacion or Domain.Enums.EstadoPreparacionPostulacion.PendienteAprobacionCv ||
+            (x.Estado == Domain.Enums.EstadoPreparacionPostulacion.Enviada && x.PostulacionId.HasValue))
+            .OrderByDescending(x => x.FechaActualizacion).FirstOrDefault();
+    async Task<PreparacionPostulacion?> ObtenerUltimaPreparacionAsync(Guid usuarioId, CancellationToken ct = default) =>
+        (await ListarPreparacionesAsync(usuarioId, ct)).OrderByDescending(x => x.FechaActualizacion).FirstOrDefault();
     Task<List<PreparacionPostulacion>> ListarPreparacionesAsync(Guid usuarioId, CancellationToken ct = default);
     Task<PreparacionPostulacion?> ObtenerPreparacionAsync(Guid id, Guid usuarioId, CancellationToken ct = default);
     Task<PreparacionPostulacion?> ObtenerEstadoVigenteAsync(Guid id, Guid usuarioId, CancellationToken ct = default) =>

@@ -25,6 +25,7 @@ builder.Services.AddScoped<PendientesService>();
 builder.Services.AddScoped<PreparacionesService>();
 builder.Services.AddScoped<RevisionPreparacionesService>();
 builder.Services.AddScoped<OrdenamientoPendientesService>();
+builder.Services.AddSingleton<DiagnosticoAgentePostulaciones>();
 builder.Services.AddScoped<ProcesamientoAutonomoService>();
 builder.Services.AddScoped<SolicitudUsuarioIAService>();
 builder.Services.AddScoped<AprobacionCvIAService>();
